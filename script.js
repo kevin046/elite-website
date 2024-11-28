@@ -61,9 +61,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     contactForm.addEventListener('submit', function(e) {
-        console.log('Form submitted');
-        
-        // Show success message in current language
+        // Show success message immediately without waiting for response
         const successMessage = isEnglish ? {
             title: translations.en.thankYou,
             message: translations.en.willRespond,
@@ -74,6 +72,7 @@ document.addEventListener('DOMContentLoaded', function() {
             confirmation: translations.zh.emailConfirmation
         };
 
+        // Show success message right away
         contactForm.innerHTML = `
             <div class="success-message">
                 <i class="fas fa-check-circle"></i>
@@ -86,11 +85,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Scroll to success message
         contactForm.scrollIntoView({ behavior: 'smooth' });
 
-        // Log the form data being sent
-        const formData = new FormData(this);
-        for (let pair of formData.entries()) {
-            console.log(pair[0] + ': ' + pair[1]);
-        }
+        // Let the form submit naturally
+        return true;
     });
 
     // Handle custom service field visibility
