@@ -1,5 +1,9 @@
 {
   "dependencies": {
-    "nodemailer": "^6.9.1"
+    "nodemailer": "^6.9.1",
+    "puppeteer": "^21.0.0"
+  },
+  "scripts": {
+    "generate-pdf": "node templates/generate-pdf.js"
   }
 } 
