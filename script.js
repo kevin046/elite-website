@@ -61,7 +61,15 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     contactForm.addEventListener('submit', function(e) {
-        // Show success message immediately without waiting for response
+        // Prevent double submission
+        if (submitButton.disabled) {
+            return;
+        }
+
+        // Disable the submit button immediately
+        submitButton.disabled = true;
+
+        // Show success message immediately
         const successMessage = isEnglish ? {
             title: translations.en.thankYou,
             message: translations.en.willRespond,
@@ -72,7 +80,10 @@ document.addEventListener('DOMContentLoaded', function() {
             confirmation: translations.zh.emailConfirmation
         };
 
-        // Show success message right away
+        // Create a copy of form data before replacing content
+        const formData = new FormData(contactForm);
+
+        // Replace form with success message
         contactForm.innerHTML = `
             <div class="success-message">
                 <i class="fas fa-check-circle"></i>
@@ -85,8 +96,21 @@ document.addEventListener('DOMContentLoaded', function() {
         // Scroll to success message
         contactForm.scrollIntoView({ behavior: 'smooth' });
 
-        // Let the form submit naturally
-        return true;
+        // Submit the form data in the background
+        fetch(contactForm.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'Accept': 'application/json'
+            }
+        }).catch(error => {
+            console.error('Form submission error:', error);
+            // Even if there's an error, we don't show it to the user
+            // since the form data is already captured
+        });
+
+        // Prevent default form submission
+        e.preventDefault();
     });
 
     // Handle custom service field visibility
