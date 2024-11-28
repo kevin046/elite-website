@@ -61,15 +61,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     contactForm.addEventListener('submit', function(e) {
-        // Prevent double submission
-        if (submitButton.disabled) {
-            return;
-        }
-
-        // Disable the submit button immediately
-        submitButton.disabled = true;
-
-        // Show success message immediately
+        // Show success message before form submits
         const successMessage = isEnglish ? {
             title: translations.en.thankYou,
             message: translations.en.willRespond,
@@ -80,37 +72,27 @@ document.addEventListener('DOMContentLoaded', function() {
             confirmation: translations.zh.emailConfirmation
         };
 
-        // Create a copy of form data before replacing content
-        const formData = new FormData(contactForm);
+        // Store the form action and method
+        const formAction = this.action;
+        const formMethod = this.method;
 
-        // Replace form with success message
-        contactForm.innerHTML = `
-            <div class="success-message">
-                <i class="fas fa-check-circle"></i>
-                <h3>${successMessage.title}</h3>
-                <p>${successMessage.message}</p>
-                <p>${successMessage.confirmation}</p>
-            </div>
-        `;
-        
-        // Scroll to success message
-        contactForm.scrollIntoView({ behavior: 'smooth' });
+        // Show success message
+        setTimeout(() => {
+            this.innerHTML = `
+                <div class="success-message">
+                    <i class="fas fa-check-circle"></i>
+                    <h3>${successMessage.title}</h3>
+                    <p>${successMessage.message}</p>
+                    <p>${successMessage.confirmation}</p>
+                </div>
+            `;
+            
+            // Scroll to success message
+            this.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
 
-        // Submit the form data in the background
-        fetch(contactForm.action, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'Accept': 'application/json'
-            }
-        }).catch(error => {
-            console.error('Form submission error:', error);
-            // Even if there's an error, we don't show it to the user
-            // since the form data is already captured
-        });
-
-        // Prevent default form submission
-        e.preventDefault();
+        // Allow form to submit normally
+        return true;
     });
 
     // Handle custom service field visibility
