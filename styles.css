@@ -1083,4 +1083,13 @@ img {
     html {
         scroll-behavior: smooth;
     }
+}
+
+.form-disclaimer {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 0.5rem;
+    text-align: center;
+    font-style: italic;
+    padding: 0 1rem;
 } 

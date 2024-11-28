@@ -8,14 +8,16 @@ const translations = {
         sending: "Sending...",
         thankYou: "Thank you for your message!",
         willRespond: "We'll get back to you as soon as possible.",
-        emailConfirmation: "A confirmation email has been sent to your email address."
+        emailConfirmation: "A confirmation email has been sent to your email address.",
+        disclaimer: "Note: If the page appears to be loading, please refresh. Your message will still be sent successfully."
     },
     zh: {
         sendMessage: "发送",
         sending: "发送中...",
         thankYou: "感谢您的留言！",
         willRespond: "我们会尽快与您联系。",
-        emailConfirmation: "确认邮件已发送至您的邮箱。"
+        emailConfirmation: "确认邮件已发送至您的邮箱。",
+        disclaimer: "注意：如果页面显示正在加载，请刷新页面。您的信息仍会成功发送。"
     }
 };
 
@@ -50,6 +52,15 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
+    // Add disclaimer message after submit button
+    const disclaimerMessage = document.createElement('p');
+    disclaimerMessage.className = 'form-disclaimer';
+    disclaimerMessage.style.cssText = 'font-size: 0.85rem; color: #666; margin-top: 0.5rem; text-align: center;';
+    disclaimerMessage.innerHTML = isEnglish ? 
+        'Note: If the page appears to be loading, please refresh. Your message will still be sent successfully.' :
+        '注意：如果页面显示正在加载，请刷新页面。您的信息仍会成功发送。';
+    submitButton.parentNode.insertBefore(disclaimerMessage, submitButton.nextSibling);
+
     // Language toggle handling
     const langToggle = document.getElementById('langToggle');
     const langText = langToggle.querySelector('.lang-text');
@@ -58,6 +69,11 @@ document.addEventListener('DOMContentLoaded', function() {
         isEnglish = !isEnglish;
         langText.textContent = isEnglish ? "中文" : "English";
         updateContent(translations[isEnglish ? 'en' : 'zh']);
+        
+        // Update disclaimer text
+        disclaimerMessage.innerHTML = isEnglish ? 
+            'Note: If the page appears to be loading, please refresh. Your message will still be sent successfully.' :
+            '注意：如果页面显示正在加载，请刷新页面。您的信息仍会成功发送。';
     });
 
     contactForm.addEventListener('submit', function(e) {
