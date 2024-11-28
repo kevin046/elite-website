@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     contactForm.addEventListener('submit', function(e) {
-        // Show success message before form submits
+        // Show success message immediately
         const successMessage = isEnglish ? {
             title: translations.en.thankYou,
             message: translations.en.willRespond,
@@ -88,26 +88,20 @@ document.addEventListener('DOMContentLoaded', function() {
             confirmation: translations.zh.emailConfirmation
         };
 
-        // Store the form action and method
-        const formAction = this.action;
-        const formMethod = this.method;
+        // Replace form with success message
+        this.innerHTML = `
+            <div class="success-message">
+                <i class="fas fa-check-circle"></i>
+                <h3>${successMessage.title}</h3>
+                <p>${successMessage.message}</p>
+                <p>${successMessage.confirmation}</p>
+            </div>
+        `;
+        
+        // Scroll to success message
+        this.scrollIntoView({ behavior: 'smooth' });
 
-        // Show success message
-        setTimeout(() => {
-            this.innerHTML = `
-                <div class="success-message">
-                    <i class="fas fa-check-circle"></i>
-                    <h3>${successMessage.title}</h3>
-                    <p>${successMessage.message}</p>
-                    <p>${successMessage.confirmation}</p>
-                </div>
-            `;
-            
-            // Scroll to success message
-            this.scrollIntoView({ behavior: 'smooth' });
-        }, 100);
-
-        // Allow form to submit normally
+        // Let the form submit naturally
         return true;
     });
 
