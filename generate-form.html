@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate PDF Documents - Elite Renovation Works</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .form-container {
+            background: #f5f6fa;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #e74c3c;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #c0392b;
+        }
+        .template-selector {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Generate PDF Documents</h1>
+    
+    <div class="form-container">
+        <div class="template-selector">
+            <label for="template-type">Select Document Type:</label>
+            <select id="template-type" onchange="toggleFormFields()">
+                <option value="estimation">Estimation</option>
+                <option value="receipt">Receipt</option>
+            </select>
+        </div>
+
+        <form id="pdf-generator-form">
+            <!-- Common Fields -->
+            <div class="form-group">
+                <label for="name">Client Name:</label>
+                <input type="text" id="name" name="name" required>
+            </div>
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            <div class="form-group">
+                <label for="phone">Phone:</label>
+                <input type="tel" id="phone" name="phone" required>
+            </div>
+            <div class="form-group">
+                <label for="service">Service Type:</label>
+                <select id="service" name="service" required>
+                    <option value="">Select Service</option>
+                    <option value="Kitchen Renovation">Kitchen Renovation</option>
+                    <option value="Bathroom Renovation">Bathroom Renovation</option>
+                    <option value="Painting">Painting</option>
+                    <option value="Flooring">Flooring</option>
+                    <option value="Drywall">Drywall</option>
+                    <option value="Roofing">Roofing</option>
+                </select>
+            </div>
+
+            <!-- Estimation-specific fields -->
+            <div class="estimation-fields">
+                <div class="form-group">
+                    <label for="message">Project Description:</label>
+                    <textarea id="message" name="message" rows="4"></textarea>
+                </div>
+            </div>
+
+            <!-- Receipt-specific fields -->
+            <div class="receipt-fields" style="display: none;">
+                <div class="form-group">
+                    <label for="address">Client Address:</label>
+                    <input type="text" id="address" name="address">
+                </div>
+                <div class="form-group">
+                    <label for="quantity">Quantity:</label>
+                    <input type="number" id="quantity" name="quantity" min="1">
+                </div>
+                <div class="form-group">
+                    <label for="unit_price">Unit Price:</label>
+                    <input type="number" id="unit_price" name="unit_price" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label for="payment_method">Payment Method:</label>
+                    <select id="payment_method" name="payment_method">
+                        <option value="Cash">Cash</option>
+                        <option value="E-Transfer">E-Transfer</option>
+                        <option value="Check">Check</option>
+                        <option value="Credit Card">Credit Card</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="payment_status">Payment Status:</label>
+                    <select id="payment_status" name="payment_status">
+                        <option value="Paid">Paid</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Partial">Partial</option>
+                    </select>
+                </div>
+            </div>
+
+            <button type="submit">Generate PDF</button>
+        </form>
+    </div>
+
+    <script>
+        function toggleFormFields() {
+            const templateType = document.getElementById('template-type').value;
+            const estimationFields = document.querySelector('.estimation-fields');
+            const receiptFields = document.querySelector('.receipt-fields');
+
+            if (templateType === 'estimation') {
+                estimationFields.style.display = 'block';
+                receiptFields.style.display = 'none';
+            } else {
+                estimationFields.style.display = 'none';
+                receiptFields.style.display = 'block';
+            }
+        }
+
+        document.getElementById('pdf-generator-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const templateType = document.getElementById('template-type').value;
+            
+            try {
+                const response = await fetch('/api/generate-pdf', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        templateType,
+                        data: Object.fromEntries(formData)
+                    })
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${templateType}-${Date.now()}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                } else {
+                    throw new Error('Failed to generate PDF');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to generate PDF. Please try again.');
+            }
+        });
+    </script>
+</body>
+</html> 
