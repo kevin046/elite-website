@@ -45,11 +45,11 @@ app.post('/api/generate-pdf', async (req, res) => {
 
 // Admin routes
 app.get('/admin/admin-login.html', (req, res) => {
-    res.sendFile(path.join(__dirname, 'admin/admin-login.html'));
+    res.sendFile(path.join(__dirname, 'admin-login.html'));
 });
 
 app.get('/admin/admin-dashboard.html', (req, res) => {
-    res.sendFile(path.join(__dirname, 'admin/admin-dashboard.html'));
+    res.sendFile(path.join(__dirname, 'admin-dashboard.html'));
 });
 
 // Start server
