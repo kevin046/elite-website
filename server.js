@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { generatePDF } = require('./templates/generate-pdf');
+const { generatePDF } = require('./admin/generate-pdf');
 const fs = require('fs').promises;
 const path = require('path');
 
@@ -12,6 +12,11 @@ app.use(express.json());
 
 // Serve static files
 app.use(express.static(path.join(__dirname)));
+
+// Admin route
+app.get('/admin', (req, res) => {
+    res.sendFile(path.join(__dirname, 'admin/admin-login.html'));
+});
 
 // PDF generation endpoint
 app.post('/api/generate-pdf', async (req, res) => {
