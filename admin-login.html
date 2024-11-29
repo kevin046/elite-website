@@ -105,11 +105,16 @@
                 // Store authentication in session storage
                 sessionStorage.setItem('adminAuthenticated', 'true');
                 // Redirect to dashboard instead of estimate form
-                window.location.href = '/admin/dashboard';
+                window.location.href = './admin-dashboard.html';
             } else {
                 errorMessage.style.display = 'block';
             }
         });
+
+        // Check if already authenticated
+        if (sessionStorage.getItem('adminAuthenticated') === 'true') {
+            window.location.replace('./admin-dashboard.html');
+        }
     </script>
 </body>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
