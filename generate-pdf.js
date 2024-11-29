@@ -1,55 +1,22 @@
-const puppeteer = require('puppeteer');
-const fs = require('fs');
-const path = require('path');
+import { generatePDF } from '../admin/generate-pdf';
 
-async function generatePDF(templateName, data) {
-    try {
-        const browser = await puppeteer.launch();
-        const page = await browser.newPage();
-        
-        // Read the HTML template
-        const templatePath = path.join(__dirname, `${templateName}_template.html`);
-        console.log('Template Path:', templatePath); // Debug log
-        
-        let html = fs.readFileSync(templatePath, 'utf8');
-        console.log('Data received:', data); // Debug log
-        
-        // Replace placeholders with actual data
-        Object.keys(data).forEach(key => {
-            const regex = new RegExp(`{{${key}}}`, 'g');
-            html = html.replace(regex, data[key] || '');
-        });
-        
-        // Set content and generate PDF
-        await page.setContent(html);
-        const outputDir = path.join(__dirname, '../output');
-        
-        // Create output directory if it doesn't exist
-        if (!fs.existsSync(outputDir)) {
-            fs.mkdirSync(outputDir, { recursive: true });
-        }
-        
-        const pdfPath = path.join(outputDir, `${templateName}-${Date.now()}.pdf`);
-        console.log('PDF Path:', pdfPath); // Debug log
-        
-        await page.pdf({
-            path: pdfPath,
-            format: 'A4',
-            printBackground: true,
-            margin: {
-                top: '20px',
-                right: '20px',
-                bottom: '20px',
-                left: '20px'
-            }
-        });
-
-        await browser.close();
-        return pdfPath;
-    } catch (error) {
-        console.error('Error in generatePDF:', error);
-        throw error;
+export default async function handler(req, res) {
+    if (req.method !== 'POST') {
+        return res.status(405).json({ error: 'Method not allowed' });
     }
-}
 
-module.exports = { generatePDF }; 
+    try {
+        const { templateType, data } = req.body;
+        const pdfPath = await generatePDF(templateType, data);
+        
+        const pdfBuffer = fs.readFileSync(pdfPath);
+        fs.unlinkSync(pdfPath); // Clean up the file
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=${templateType}-${Date.now()}.pdf`);
+        res.send(pdfBuffer);
+    } catch (error) {
+        console.error('Error generating PDF:', error);
+        res.status(500).json({ error: 'Failed to generate PDF' });
+    }
+} 
