@@ -1092,4 +1092,24 @@ img {
     text-align: center;
     font-style: italic;
     padding: 0 1rem;
+}
+
+/* Add to your existing styles */
+.admin-link {
+    color: #666;
+    opacity: 0.5;
+    transition: opacity 0.3s ease;
+    margin-left: 15px;
+}
+
+.admin-link:hover {
+    opacity: 1;
+    color: #e74c3c;
+}
+
+/* Optional: Hide admin link on mobile */
+@media (max-width: 768px) {
+    .admin-link {
+        display: none;
+    }
 } 
