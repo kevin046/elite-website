@@ -297,8 +297,7 @@
             font-style: italic;
         }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 </head>
 <body>
     <div class="form-container">
@@ -435,7 +434,12 @@
                 </div>
             </div>
 
-            <button type="submit">Generate Estimate PDF</button>
+            <div class="form-actions">
+                <button type="button" id="downloadBtn" class="generate-btn">
+                    <i class="fas fa-file-excel"></i> Generate & Download Excel
+                </button>
+            </div>
+            <button type="submit" class="cta-button submit-button">Generate Estimate</button>
         </form>
     </div>
 
@@ -537,14 +541,29 @@
             
             // Show loading state
             const submitButton = this.querySelector('button[type="submit"]');
-            submitButton.disabled = true;
-            submitButton.textContent = 'Generating...';
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.textContent = 'Generating...';
+            }
             
             try {
-                // Collect form data
+                // Collect form data including line items
                 const formData = new FormData(this);
-                const data = Object.fromEntries(formData);
-                
+                const lineItems = [...document.querySelectorAll('.line-item')].slice(1).map(item => ({
+                    description: item.querySelector('[name="description[]"]')?.value,
+                    quantity: item.querySelector('[name="quantity[]"]')?.value,
+                    unitPrice: item.querySelector('[name="unitPrice[]"]')?.value,
+                    amount: item.querySelector('[name="amount[]"]')?.value
+                }));
+
+                const data = {
+                    ...Object.fromEntries(formData),
+                    lineItems,
+                    subtotal: document.querySelector('[name="subtotal"]').value,
+                    tax: document.querySelector('[name="tax"]').value,
+                    total: document.querySelector('[name="total"]').value
+                };
+
                 // Send request to generate PDF
                 const response = await fetch('http://localhost:3000/api/generate-pdf', {
                     method: 'POST',
@@ -561,118 +580,29 @@
                     throw new Error('Failed to generate PDF');
                 }
 
-                // Get PDF blob
                 const blob = await response.blob();
-                
-                // Create modal for options
-                const modal = document.createElement('div');
-                modal.className = 'modal';
-                modal.innerHTML = `
-                    <div class="modal-content">
-                        <h3>Document Generated Successfully</h3>
-                        <div class="modal-buttons">
-                            <button onclick="printPDF('${URL.createObjectURL(blob)}')" class="print-btn">
-                                <i class="fas fa-print"></i> Print Document
-                            </button>
-                            <button onclick="downloadPDF('${URL.createObjectURL(blob)}', 'estimate-${data.estimateNumber}.pdf')" class="download-btn">
-                                <i class="fas fa-download"></i> Download PDF
-                            </button>
-                            <button onclick="closeModal(this)" class="close-btn">
-                                <i class="fas fa-times"></i> Close
-                            </button>
-                        </div>
-                    </div>
-                `;
-                document.body.appendChild(modal);
-                
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `estimate-${data.estimateNumber}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+
+                // Show success message
+                alert('Estimate generated successfully!');
             } catch (error) {
                 console.error('Error:', error);
                 alert('Failed to generate estimate. Please try again.');
             } finally {
-                submitButton.disabled = false;
-                submitButton.textContent = 'Generate Estimate';
+                // Reset button state
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Generate Estimate';
+                }
             }
         });
-
-        // Helper functions for PDF actions
-        function printPDF(url) {
-            const iframe = document.createElement('iframe');
-            iframe.style.display = 'none';
-            iframe.src = url;
-            document.body.appendChild(iframe);
-            iframe.contentWindow.print();
-        }
-
-        function downloadPDF(url, filename) {
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-
-        function closeModal(element) {
-            const modal = element.closest('.modal');
-            if (modal) {
-                modal.remove();
-            }
-        }
-
-        function generatePDF() {
-            // Show loading message
-            const loadingMsg = document.createElement('div');
-            loadingMsg.className = 'loading-message';
-            loadingMsg.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating PDF...';
-            document.body.appendChild(loadingMsg);
-
-            const element = document.querySelector('.form-container');
-            
-            // First create the canvas
-            html2canvas(element, {
-                scale: 1,
-                useCORS: true,
-                allowTaint: true,
-                scrollY: -window.scrollY
-            }).then(function(canvas) {
-                // Canvas created
-                const imgData = canvas.toDataURL('image/jpeg', 1.0);
-                
-                // Create PDF
-                const { jsPDF } = window.jspdf;
-                const pdf = new jsPDF('p', 'pt', 'letter');
-                
-                const pageWidth = pdf.internal.pageSize.getWidth();
-                const pageHeight = pdf.internal.pageSize.getHeight();
-                const imgWidth = canvas.width;
-                const imgHeight = canvas.height;
-                
-                const ratio = Math.min(pageWidth / imgWidth, pageHeight / imgHeight);
-                const imgX = (pageWidth - imgWidth * ratio) / 2;
-                const imgY = 30;
-
-                pdf.addImage(imgData, 'JPEG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
-                
-                // Get estimate number
-                const estimateNum = document.querySelector('[name="estimateNumber"]').value || 'estimate';
-                
-                // Save the PDF
-                try {
-                    pdf.save(`Elite_Renovation_Estimate_${estimateNum}.pdf`);
-                    document.body.removeChild(loadingMsg);
-                    alert('PDF generated successfully!');
-                } catch (error) {
-                    console.error('Error saving PDF:', error);
-                    document.body.removeChild(loadingMsg);
-                    alert('Error saving PDF. Please try again.');
-                }
-            }).catch(function(error) {
-                console.error('Error generating canvas:', error);
-                document.body.removeChild(loadingMsg);
-                alert('Error generating PDF. Please try again.');
-            });
-        }
     </script>
 </body>
 </html>
