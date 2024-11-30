@@ -44,7 +44,7 @@ app.post('/api/generate-pdf', async (req, res) => {
 });
 
 // Admin routes
-app.get('admin-login.html', (req, res) => {
+app.get('/admin-login.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'admin-login.html'));
 });
 
