@@ -617,12 +617,32 @@
                     status: 'pending'
                 };
 
-                // Save to Supabase
-                const { data, error } = await supabaseClient
+                // Check if estimate number already exists
+                const { data: existingEstimate, error: searchError } = await supabaseClient
                     .from('estimates')
-                    .insert([estimateData]);
+                    .select('id')
+                    .eq('estimate_number', estimateData.estimate_number)
+                    .single();
 
-                if (error) throw error;
+                if (searchError && searchError.code !== 'PGRST116') throw searchError;
+
+                let saveError;
+                if (existingEstimate) {
+                    // Update existing estimate
+                    const { error } = await supabaseClient
+                        .from('estimates')
+                        .update(estimateData)
+                        .eq('id', existingEstimate.id);
+                    saveError = error;
+                } else {
+                    // Insert new estimate
+                    const { error } = await supabaseClient
+                        .from('estimates')
+                        .insert([estimateData]);
+                    saveError = error;
+                }
+
+                if (saveError) throw saveError;
 
                 // Create PDF
                 window.jsPDF = window.jspdf.jsPDF;
@@ -665,26 +685,22 @@
                     doc.setLineWidth(0.5);
                     doc.line(15, imgHeight + 35, doc.internal.pageSize.width - 15, imgHeight + 35);
 
-                    // Continue with client info (adjusted Y positions)
+                    // Add client info
                     doc.setFontSize(11);
-                    doc.text('Client Information:', 15, imgHeight + 50);
+                    doc.text('Client Details:', 15, imgHeight + 50);
                     doc.setFontSize(10);
                     doc.text('Name: ' + document.querySelector('[name="clientName"]').value, 20, imgHeight + 60);
-                    doc.text('Phone: ' + document.querySelector('[name="clientPhone"]').value, 20, imgHeight + 67);
-                    doc.text('Email: ' + document.querySelector('[name="clientEmail"]').value, 20, imgHeight + 74);
+                    doc.text('Phone: ' + document.querySelector('[name="clientPhone"]').value, doc.internal.pageSize.width/2, imgHeight + 60);
+                    doc.text('Email: ' + document.querySelector('[name="clientEmail"]').value, 20, imgHeight + 67);
                     doc.text('Address: ' + document.querySelector('[name="clientStreet"]').value + ', ' + 
-                            document.querySelector('[name="clientCity"]').value, 20, imgHeight + 81);
+                            document.querySelector('[name="clientCity"]').value, doc.internal.pageSize.width/2, imgHeight + 67);
 
-                    // Add project description
-                    doc.setFontSize(11);
-                    doc.text('Project Description:', 15, imgHeight + 95);
-                    doc.setFontSize(10);
-                    const description = document.querySelector('[name="projectDescription"]').value;
-                    doc.text(description, 20, imgHeight + 105);
+                    // Add project description on same level
+                    doc.text('Project: ' + document.querySelector('[name="projectDescription"]').value, 20, imgHeight + 80);
 
-                    // Update the starting Y position for the table
+                    // Update table position to start earlier
                     doc.autoTable({
-                        startY: imgHeight + 120,
+                        startY: imgHeight + 90,
                         head: [['Description', 'Quantity', 'Unit Price', 'Amount']],
                         body: [...document.querySelectorAll('.line-item')].slice(1).map(item => [
                             item.querySelector('[name="description[]"]').value,
@@ -753,7 +769,7 @@
 
                     // Add validity period notice
                     doc.setTextColor(231, 76, 60); // Red color for emphasis
-                    doc.text('* This estimate is valid for 15 days from the date of issue.', 15, doc.internal.pageSize.height - 40);
+                    doc.text('* This estimate is valid for 15 days from the date of issue.', 20, doc.internal.pageSize.height - 25);
 
                     // Update footer position and alignment
                     doc.setFontSize(9);
@@ -768,15 +784,7 @@
                         });
                     }
 
-                    doc.text([
-                        'Thank you for choosing Elite Renovation Works!',
-                        'For questions, please contact Jay at 647-563-1314'
-                    ], pageWidth - 15, doc.internal.pageSize.height - 30, {
-                        align: 'right',
-                        lineHeightFactor: 1.5
-                    });
-
-                
+                                  
                     // Save PDF
                     doc.save(`estimate-${document.querySelector('[name="estimateNumber"]').value}.pdf`);
                     alert('Estimate generated and saved successfully!');
