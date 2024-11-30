@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Generate Estimate - Elite Renovation Works</title>
+    <title>Quote Estimate - Elite Renovation Works</title>
     <link rel="icon" type="image/x-icon" href="https://i.ibb.co/M58mL0J/transparent-elite-home.png">
     <style>
         body { 
@@ -19,9 +19,33 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         .form-header {
-            margin-bottom: 30px;
-            padding-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 10px 20px;
+            background-color: #f8f9fa;
             border-bottom: 2px solid #e74c3c;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .header-right label {
+            font-weight: 500;
+            color: #2c3e50;
+        }
+        .current-date {
+            font-size: 16px;
+            color: #2c3e50;
+            font-weight: 500;
+            min-width: 100px;
         }
         .company-logo {
             max-width: 300px;
@@ -241,13 +265,46 @@
                 max-width: 800px;
             }
         }
+
+        .estimate-number-section {
+            margin: 20px 0;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .estimate-number-section .form-group {
+            max-width: 300px;
+        }
+
+        #gstSection, #chequeSection {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        #gstSection input, #chequeSection input {
+            background-color: #fff;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+
+        .note {
+            display: block;
+            color: #e74c3c;
+            font-size: 14px;
+            margin-top: 5px;
+            font-style: italic;
+        }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 </head>
 <body>
     <div class="form-container">
         <div class="form-header">
             <img src="https://i.ibb.co/M58mL0J/transparent-elite-home.png" alt="Elite Renovation Works Logo" class="company-logo">
-            <h1 class="section-title">Generate Estimate</h1>
+            <h1 class="section-title">Estimate</h1>
             <div class="company-info-small">
                 <p><strong>Elite Renovation Works</strong></p>
                 <p>Jay | 647-563-1314</p>
@@ -257,6 +314,8 @@
         </div>
         
         <form id="estimateForm">
+            <label>Estimate #:</label>
+                    <input type="text" name="estimateNumber" readonly>
             <!-- Client Information -->
             <div class="form-section">
                 <h2 class="section-title">Client Information</h2>
@@ -312,22 +371,7 @@
             <!-- Project Details -->
             <div class="form-section">
                 <h2 class="section-title">Project Details</h2>
-                <div class="form-group">
-                    <label>Estimate Number:</label>
-                    <input type="text" name="estimateNumber" readonly>
-                </div>
-                <div class="form-group">
-                    <label>Service Type:</label>
-                    <select name="serviceType" required>
-                        <option value="">Select Service</option>
-                        <option value="Kitchen Renovation">Kitchen Renovation</option>
-                        <option value="Bathroom Renovation">Bathroom Renovation</option>
-                        <option value="Painting">Painting</option>
-                        <option value="Flooring">Flooring</option>
-                        <option value="Drywall">Drywall</option>
-                        <option value="Roofing">Roofing</option>
-                        <option value="Other">Other (Specify)</option>
-                    </select>
+                <div class="form-group">        
                 </div>
                 <div class="form-group">
                     <label>Project Description:</label>
@@ -574,6 +618,60 @@
             if (modal) {
                 modal.remove();
             }
+        }
+
+        function generatePDF() {
+            // Show loading message
+            const loadingMsg = document.createElement('div');
+            loadingMsg.className = 'loading-message';
+            loadingMsg.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating PDF...';
+            document.body.appendChild(loadingMsg);
+
+            const element = document.querySelector('.form-container');
+            
+            // First create the canvas
+            html2canvas(element, {
+                scale: 1,
+                useCORS: true,
+                allowTaint: true,
+                scrollY: -window.scrollY
+            }).then(function(canvas) {
+                // Canvas created
+                const imgData = canvas.toDataURL('image/jpeg', 1.0);
+                
+                // Create PDF
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'pt', 'letter');
+                
+                const pageWidth = pdf.internal.pageSize.getWidth();
+                const pageHeight = pdf.internal.pageSize.getHeight();
+                const imgWidth = canvas.width;
+                const imgHeight = canvas.height;
+                
+                const ratio = Math.min(pageWidth / imgWidth, pageHeight / imgHeight);
+                const imgX = (pageWidth - imgWidth * ratio) / 2;
+                const imgY = 30;
+
+                pdf.addImage(imgData, 'JPEG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+                
+                // Get estimate number
+                const estimateNum = document.querySelector('[name="estimateNumber"]').value || 'estimate';
+                
+                // Save the PDF
+                try {
+                    pdf.save(`Elite_Renovation_Estimate_${estimateNum}.pdf`);
+                    document.body.removeChild(loadingMsg);
+                    alert('PDF generated successfully!');
+                } catch (error) {
+                    console.error('Error saving PDF:', error);
+                    document.body.removeChild(loadingMsg);
+                    alert('Error saving PDF. Please try again.');
+                }
+            }).catch(function(error) {
+                console.error('Error generating canvas:', error);
+                document.body.removeChild(loadingMsg);
+                alert('Error generating PDF. Please try again.');
+            });
         }
     </script>
 </body>
