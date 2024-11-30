@@ -298,6 +298,8 @@
         }
     </style>
     <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
     <div class="form-container">
@@ -435,11 +437,10 @@
             </div>
 
             <div class="form-actions">
-                <button type="button" id="downloadBtn" class="generate-btn">
-                    <i class="fas fa-file-excel"></i> Generate & Download Excel
+                <button type="submit" class="cta-button submit-button">
+                    Generate Estimate
                 </button>
             </div>
-            <button type="submit" class="cta-button submit-button">Generate Estimate</button>
         </form>
     </div>
 
@@ -536,71 +537,152 @@
         }
 
         // Update the form submission handler
-        document.getElementById('estimateForm').addEventListener('submit', async function(e) {
+        document.getElementById('estimateForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
-            // Show loading state
             const submitButton = this.querySelector('button[type="submit"]');
-            if (submitButton) {
-                submitButton.disabled = true;
-                submitButton.textContent = 'Generating...';
-            }
+            submitButton.disabled = true;
+            submitButton.textContent = 'Generating...';
             
             try {
-                // Collect form data including line items
-                const formData = new FormData(this);
-                const lineItems = [...document.querySelectorAll('.line-item')].slice(1).map(item => ({
-                    description: item.querySelector('[name="description[]"]')?.value,
-                    quantity: item.querySelector('[name="quantity[]"]')?.value,
-                    unitPrice: item.querySelector('[name="unitPrice[]"]')?.value,
-                    amount: item.querySelector('[name="amount[]"]')?.value
-                }));
+                // Create PDF
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                // Add company logo
+                const logoUrl = 'https://i.ibb.co/M58mL0J/transparent-elite-home.png';
+                
+                // Load and add logo
+                const img = new Image();
+                img.src = logoUrl;
+                img.onload = function() {
+                    // Add logo with proper scaling
+                    const imgWidth = 70;
+                    const imgHeight = (img.height * imgWidth) / img.width;
+                    doc.addImage(img, 'PNG', 15, 10, imgWidth, imgHeight);
+                    
+                    // Add company info in top right
+                    doc.setFontSize(14);
+                    doc.text('Elite Renovation Works', doc.internal.pageSize.width - 15, 20, { align: 'right' });
+                    doc.setFontSize(9);
+                    doc.text([
+                        '6 Interlacken Way',
+                        'Markham, Ontario L3R 5H9',
+                        'Representative: Jay',
+                        'Phone: 647-563-1314',
+                        'Email: jay@eliterenovationworks.ca'
+                    ], doc.internal.pageSize.width - 15, 25, { 
+                        align: 'right',
+                        lineHeightFactor: 1.5
+                    });
+                    
+                    // Add estimate details with smaller font (moved down)
+                    doc.setFontSize(10);
+                    doc.text('Estimate #: ' + document.querySelector('[name="estimateNumber"]').value, 15, imgHeight + 25);
+                    doc.text('Date: ' + new Date().toLocaleDateString(), doc.internal.pageSize.width - 15, imgHeight + 25, { align: 'right' });
 
-                const data = {
-                    ...Object.fromEntries(formData),
-                    lineItems,
-                    subtotal: document.querySelector('[name="subtotal"]').value,
-                    tax: document.querySelector('[name="tax"]').value,
-                    total: document.querySelector('[name="total"]').value
+                    // Add separator line under estimate details
+                    doc.setDrawColor(44, 62, 80); // Dark blue color matching table header
+                    doc.setLineWidth(0.5);
+                    doc.line(15, imgHeight + 35, doc.internal.pageSize.width - 15, imgHeight + 35);
+
+                    // Continue with client info (adjusted Y positions)
+                    doc.setFontSize(11);
+                    doc.text('Client Information:', 15, imgHeight + 50);
+                    doc.setFontSize(10);
+                    doc.text('Name: ' + document.querySelector('[name="clientName"]').value, 20, imgHeight + 60);
+                    doc.text('Phone: ' + document.querySelector('[name="clientPhone"]').value, 20, imgHeight + 67);
+                    doc.text('Email: ' + document.querySelector('[name="clientEmail"]').value, 20, imgHeight + 74);
+                    doc.text('Address: ' + document.querySelector('[name="clientStreet"]').value + ', ' + 
+                            document.querySelector('[name="clientCity"]').value, 20, imgHeight + 81);
+
+                    // Add project description
+                    doc.setFontSize(11);
+                    doc.text('Project Description:', 15, imgHeight + 95);
+                    doc.setFontSize(10);
+                    const description = document.querySelector('[name="projectDescription"]').value;
+                    doc.text(description, 20, imgHeight + 105);
+
+                    // Update the starting Y position for the table
+                    doc.autoTable({
+                        startY: imgHeight + 120,
+                        head: [['Description', 'Quantity', 'Unit Price', 'Amount']],
+                        body: [...document.querySelectorAll('.line-item')].slice(1).map(item => [
+                            item.querySelector('[name="description[]"]').value,
+                            item.querySelector('[name="quantity[]"]').value,
+                            '$' + item.querySelector('[name="unitPrice[]"]').value,
+                            '$' + item.querySelector('[name="amount[]"]').value
+                        ]),
+                        foot: [
+                            ['', '', 'Subtotal:', '$' + document.querySelector('[name="subtotal"]').value],
+                            ['', '', 'Tax (13%):', '$' + document.querySelector('[name="tax"]').value],
+                            ['', '', 'Total:', '$' + document.querySelector('[name="total"]').value]
+                        ],
+                        theme: 'grid',
+                        headStyles: { 
+                            fillColor: [44, 62, 80],
+                            fontSize: 11,
+                            halign: 'center',
+                            textColor: [255, 255, 255]
+                        },
+                        bodyStyles: { 
+                            fontSize: 10,
+                            lineColor: [200, 200, 200],
+                            textColor: [44, 62, 80]
+                        },
+                        footStyles: { 
+                            fillColor: [249, 249, 249],
+                            fontSize: 10,
+                            fontStyle: 'bold',
+                            halign: 'right',
+                            textColor: [44, 62, 80]
+                        },
+                        columnStyles: {
+                            0: { cellWidth: 'auto' },
+                            1: { cellWidth: 30, halign: 'center' },
+                            2: { cellWidth: 40, halign: 'right' },
+                            3: { cellWidth: 40, halign: 'right' }
+                        }
+                    });
+
+                    // Add payment info with improved formatting
+                    const finalY = doc.lastAutoTable.finalY + 15;
+                    doc.setFontSize(10);
+                    const paymentMethodSelect = document.getElementById('paymentMethod');
+                    const paymentMethodText = paymentMethodSelect.options[paymentMethodSelect.selectedIndex].text;
+                    doc.text('Payment Method: ' + paymentMethodText, 15, finalY);
+                    doc.text('Payment Schedule:', 15, finalY + 10);
+                    doc.setFontSize(9);
+                    doc.text('• First Payment: 1/3 of total amount due upon signing contract', 20, finalY + 20);
+                    doc.text('• Second Payment: 1/3 of total amount due at 50% project completion', 20, finalY + 27);
+                    doc.text('• Final Payment: Remaining balance due upon project completion', 20, finalY + 34);
+
+                    // Update footer position and alignment
+                    doc.setFontSize(9);
+                    doc.setTextColor(100, 100, 100);
+                    const pageWidth = doc.internal.pageSize.width;
+                    doc.text([
+                        'Thank you for choosing Elite Renovation Works!',
+                        'For questions, please contact Jay at 647-563-1314'
+                    ], pageWidth - 15, doc.internal.pageSize.height - 20, {
+                        align: 'right',
+                        lineHeightFactor: 1.5
+                    });
+
+                    // Save PDF
+                    doc.save(`estimate-${document.querySelector('[name="estimateNumber"]').value}.pdf`);
+                    alert('Estimate generated successfully!');
                 };
-
-                // Send request to generate PDF
-                const response = await fetch('http://localhost:3000/api/generate-pdf', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        templateType: 'estimation',
-                        data: data
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to generate PDF');
-                }
-
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `estimate-${data.estimateNumber}.pdf`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
-
-                // Show success message
-                alert('Estimate generated successfully!');
+                
+                img.onerror = function() {
+                    throw new Error('Failed to load company logo');
+                };
             } catch (error) {
                 console.error('Error:', error);
                 alert('Failed to generate estimate. Please try again.');
             } finally {
-                // Reset button state
-                if (submitButton) {
-                    submitButton.disabled = false;
-                    submitButton.textContent = 'Generate Estimate';
-                }
+                submitButton.disabled = false;
+                submitButton.textContent = 'Generate Estimate';
             }
         });
     </script>
