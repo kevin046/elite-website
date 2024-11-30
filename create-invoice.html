@@ -179,6 +179,12 @@
                         <input type="text" name="clientCity" required>
                     </div>
                     <div class="form-group">
+                        <label>Postal Code:</label>
+                        <input type="text" name="clientPostal" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
                         <label>Project Description:</label>
                         <textarea name="projectDescription" rows="3" required></textarea>
                     </div>
@@ -214,9 +220,29 @@
                         <input type="number" name="subtotal" readonly>
                     </div>
                     <div class="form-group">
-                        <label>HST (13%):</label>
-                        <input type="number" name="tax" readonly>
+                        <label>Discount Type:</label>
+                        <select name="discountType" id="discountType" onchange="updateDiscountInput()">
+                            <option value="none">No Discount</option>
+                            <option value="percentage">Percentage (%)</option>
+                            <option value="fixed">Fixed Amount ($)</option>
+                        </select>
                     </div>
+                </div>
+
+                <div class="form-row" id="discountRow" style="display: none;">
+                    <div class="form-group">
+                        <label>Discount Amount:</label>
+                        <input type="number" name="discountAmount" value="0" min="0" step="0.01" onchange="calculateTotals()">
+                    </div>
+                    <div class="form-group">
+                        <label>After Discount:</label>
+                        <input type="number" name="afterDiscount" readonly>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>HST (13%):</label>
+                    <input type="number" name="tax" readonly>
                 </div>
                 <div class="form-group">
                     <label>Total:</label>
@@ -235,17 +261,14 @@
         const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey)
 
         document.addEventListener('DOMContentLoaded', function() {
+            // Generate invoice number
+            generateInvoiceNumber();
+            
             // Check for estimate data
             const estimateData = JSON.parse(sessionStorage.getItem('invoiceFromEstimate'));
             if (estimateData) {
                 populateFormFromEstimate(estimateData);
             }
-
-            // Generate invoice number
-            generateInvoiceNumber();
-            
-            // Set current date
-            document.querySelector('[name="invoiceDate"]').value = new Date().toLocaleDateString();
 
             // Check for edit data
             const editData = sessionStorage.getItem('editEstimateData');
@@ -341,16 +364,21 @@
                     const imgHeight = (img.height * imgWidth) / img.width;
                     doc.addImage(img, 'PNG', 15, 10, imgWidth, imgHeight);
                     
+                    // Add INVOICE title in center
+                    doc.setFontSize(20);
+                    doc.setTextColor(44, 62, 80);  // Dark blue color
+                    doc.text('INVOICE', doc.internal.pageSize.width/2, 20, { align: 'center' });
+                    doc.setTextColor(0, 0, 0);  // Reset to black
+                    
                     // Add company info in top right
-                    doc.setFontSize(14);
-                    doc.text('Elite Renovation Works', doc.internal.pageSize.width - 15, 20, { align: 'right' });
                     doc.setFontSize(9);
                     doc.text([
                         '6 Interlacken Way',
                         'Markham, Ontario L3R 5H9',
                         'Representative: Jay',
                         'Phone: 647-563-1314',
-                        'Email: jay@eliterenovationworks.ca'
+                        'Email: jay@eliterenovationworks.ca',
+                        document.getElementById('paymentMethod').value !== 'cash' ? 'GST/HST: 743299224RT0001' : ''
                     ], doc.internal.pageSize.width - 15, 25, { 
                         align: 'right',
                         lineHeightFactor: 1.5
@@ -367,33 +395,76 @@
                     doc.setLineWidth(0.5);
                     doc.line(15, imgHeight + 35, doc.internal.pageSize.width - 15, imgHeight + 35);
 
-                    // Add client info
+                    // Add client info with optimized spacing
                     doc.setFontSize(11);
-                    doc.text('Client Details:', 15, imgHeight + 50);
+                    doc.text('Client Details:', 15, imgHeight + 40);
                     doc.setFontSize(10);
-                    doc.text('Name: ' + document.querySelector('[name="clientName"]').value, 20, imgHeight + 60);
-                    doc.text('Phone: ' + document.querySelector('[name="clientPhone"]').value, doc.internal.pageSize.width/2, imgHeight + 60);
-                    doc.text('Email: ' + document.querySelector('[name="clientEmail"]').value, 20, imgHeight + 67);
-                    doc.text('Address: ' + document.querySelector('[name="clientStreet"]').value + ', ' + 
-                            document.querySelector('[name="clientCity"]').value, doc.internal.pageSize.width/2, imgHeight + 67);
+                    // Two-column layout for client info
+                    doc.text([
+                        'Name: ' + document.querySelector('[name="clientName"]').value,
+                        'Email: ' + document.querySelector('[name="clientEmail"]').value
+                    ], 20, imgHeight + 48);
+                    doc.text([
+                        'Phone: ' + document.querySelector('[name="clientPhone"]').value,
+                        'Address: ' + document.querySelector('[name="clientStreet"]').value + ', ' + 
+                        document.querySelector('[name="clientCity"]').value + ' ' +
+                        document.querySelector('[name="clientPostal"]').value
+                    ], doc.internal.pageSize.width/2, imgHeight + 48);
 
                     // Add project description more compactly
-                    doc.text('Project: ' + document.querySelector('[name="projectDescription"]').value, 20, imgHeight + 80);
+                    doc.text('Project: ' + document.querySelector('[name="projectDescription"]').value, 20, imgHeight + 60);
 
-                    // Add line items table
+                    // Add line items table with adjusted starting position
+                    const paymentMethodSelect = document.getElementById('paymentMethod');
+                    const paymentMethodText = paymentMethodSelect.options[paymentMethodSelect.selectedIndex].text;
+
+                    // Calculate payment amounts
+                    const totalAmount = parseFloat(document.querySelector('[name="total"]').value);
+                    const firstPayment = Math.round(totalAmount / 3);
+                    const secondPayment = Math.round(totalAmount / 3);
+                    const finalPayment = totalAmount - firstPayment - secondPayment;
+
                     doc.autoTable({
-                        startY: imgHeight + 90,
+                        startY: imgHeight + 70,
                         head: [['Description', 'Quantity', 'Unit Price', 'Amount']],
                         body: [...document.querySelectorAll('.line-item')].slice(1).map(item => [
                             item.querySelector('[name="description[]"]').value,
                             item.querySelector('[name="quantity[]"]').value,
-                            '$' + item.querySelector('[name="unitPrice[]"]').value,
-                            '$' + item.querySelector('[name="amount[]"]').value
+                            { content: '$' + item.querySelector('[name="unitPrice[]"]').value, styles: { halign: 'right' } },
+                            { content: '$' + item.querySelector('[name="amount[]"]').value, styles: { halign: 'right' } }
                         ]),
                         foot: [
-                            ['', '', 'Subtotal:', '$' + document.querySelector('[name="subtotal"]').value],
-                            ['', '', 'Tax (13%):', '$' + document.querySelector('[name="tax"]').value],
-                            ['', '', 'Total:', '$' + document.querySelector('[name="total"]').value]
+                            [
+                                { content: 'Payment Method: ' + paymentMethodText, styles: { fontSize: 8 } },
+                                '', 
+                                { content: 'Subtotal:', styles: { cellPadding: { top: 0, bottom: 0 }, halign: 'right' } }, 
+                                { content: '$' + document.querySelector('[name="subtotal"]').value, styles: { cellPadding: { top: 0, bottom: 0 }, halign: 'right' } }
+                            ],
+                            ...(document.getElementById('discountType').value !== 'none' ? [
+                                ['', '', 
+                                { content: document.getElementById('discountType').value === 'percentage' ? 
+                                    `Discount (${document.querySelector('[name="discountAmount"]').value}%):` : 
+                                    'Discount:', 
+                                    styles: { cellPadding: { top: 0, bottom: 0 }, halign: 'right' }
+                                }, 
+                                { content: '-$' + (document.querySelector('[name="subtotal"]').value - 
+                                    document.querySelector('[name="afterDiscount"]').value).toFixed(2), 
+                                    styles: { cellPadding: { top: 0, bottom: 0 }, halign: 'right' }
+                                }],
+                                ['', '', 
+                                { content: 'After Discount:', styles: { cellPadding: { top: 0, bottom: 0 }, halign: 'right' } }, 
+                                { content: '$' + document.querySelector('[name="afterDiscount"]').value, 
+                                    styles: { cellPadding: { top: 0, bottom: 0 }, halign: 'right' }
+                                }]
+                            ] : []),
+                            ['', '', 
+                            { content: 'Tax (13%):', styles: { cellPadding: { top: 0, bottom: 0 }, halign: 'right' } }, 
+                            { content: '$' + document.querySelector('[name="tax"]').value, styles: { cellPadding: { top: 0, bottom: 0 }, halign: 'right' } }],
+                            ['', '', 
+                            { content: 'Total:', styles: { cellPadding: { top: 0, bottom: 0 }, halign: 'right', fontStyle: 'bold' } }, 
+                            { content: '$' + document.querySelector('[name="total"]').value, 
+                                styles: { cellPadding: { top: 0, bottom: 0 }, halign: 'right', fontStyle: 'bold' }
+                            }]
                         ],
                         theme: 'grid',
                         headStyles: { 
@@ -409,88 +480,66 @@
                         },
                         footStyles: { 
                             fillColor: [249, 249, 249],
-                            fontSize: 10,
+                            fontSize: 9,
                             fontStyle: 'bold',
-                            halign: 'right',
+                            halign: (cell, row) => row.index === 0 && cell.index === 0 ? 'left' : 'right',
                             textColor: [44, 62, 80]
                         },
                         columnStyles: {
                             0: { cellWidth: 'auto' },
                             1: { cellWidth: 30, halign: 'center' },
-                            2: { cellWidth: 40, halign: 'right' },
-                            3: { cellWidth: 40, halign: 'right' }
+                            2: { cellWidth: 50, halign: 'right' },
+                            3: { cellWidth: 30, halign: 'right' }
                         }
                     });
 
-                    // Add payment info
-                    const finalY = doc.lastAutoTable.finalY + 15;
-                    doc.setFontSize(10);
-                    const paymentMethodSelect = document.getElementById('paymentMethod');
-                    const paymentMethodText = paymentMethodSelect.options[paymentMethodSelect.selectedIndex].text;
-                    doc.text('Payment Method: ' + paymentMethodText, 15, finalY);
-
-                    // Add payment schedule disclaimer
-                    doc.text('Payment Schedule & Terms:', 15, finalY + 10);
+                    // Add payment schedule and disclaimer after the table
+                    const finalY = doc.lastAutoTable.finalY + 5;
                     doc.setFontSize(9);
                     
-                    // Calculate payment amounts
-                    const totalAmount = parseFloat(document.querySelector('[name="total"]').value);
-                    const firstPayment = Math.round(totalAmount / 3);
-                    const secondPayment = Math.round(totalAmount / 3);
-                    const finalPayment = totalAmount - firstPayment - secondPayment;
-                    
+                    // Payment schedule on the left
                     doc.text([
-                        `• 1st Payment: $${firstPayment.toFixed(2)} (Due upon signing)`,
-                        `• 2nd Payment: $${secondPayment.toFixed(2)} (Due at 50% completion)`,
+                        'Payment Schedule:',
+                        `• First Payment: $${firstPayment.toFixed(2)} (Due upon signing)`,
+                        `• Second Payment: $${secondPayment.toFixed(2)} (Due at 50% completion)`,
                         `• Final Payment: $${finalPayment.toFixed(2)} (Due upon completion)`
-                    ], 20, finalY + 20, {
-                        lineHeightFactor: 1.3
-                    });
+                    ], 15, finalY, { lineHeightFactor: 1.3 });
                     
-                    // Add payment disclaimer in red
-                    doc.setTextColor(231, 76, 60); // Red color for disclaimer
+                    // Disclaimer on the right in red
+                    doc.setTextColor(231, 76, 60);
                     doc.text([
-                        '* All payments due within 5 business days of milestone completion',
-                        '* Work begins after receiving first payment and signed contract',
-                        '* Price subject to change with scope modifications'
-                    ], 20, finalY + 35, {
-                        lineHeightFactor: 1.3
-                    });
-                    doc.setTextColor(0, 0, 0); // Reset to black color
-
+                        'Important Notes:',
+                        '* All payments due within 5 business days',
+                        '* Work begins after first payment',
+                        '* Price subject to scope changes'
+                    ], doc.internal.pageSize.width/2 + 20, finalY, { lineHeightFactor: 1.3 });
+                    doc.setTextColor(0, 0, 0);
+                    
                     // Add signature sections
-                    const signatureY = finalY + 45;
+                    const signatureY = finalY + 15;
                     doc.setDrawColor(100, 100, 100);
                     doc.setLineWidth(0.5);
                     
-                    // Client signature section
-                    doc.text('Client Authorization', 15, signatureY + 15);
-                    doc.text('Print Name:', 15, signatureY + 25);
-                    doc.text('_____________________________', 35, signatureY + 25);
-                    doc.text('Signature:', 15, signatureY + 40);
-                    doc.text('X', 32, signatureY + 40);
-                    doc.text('_____________________________', 35, signatureY + 40);
-                    doc.text('Date:', 15, signatureY + 55);
-                    doc.text('_____________________________', 35, signatureY + 55);
+                    // Client signature section with reduced spacing
+                    doc.text('Client Authorization', 15, signatureY + 10);
+                    doc.text('Print Name:', 15, signatureY + 20);
+                    doc.text('_____________________________', 35, signatureY + 20);
+                    doc.text('Signature:', 15, signatureY + 35);
+                    doc.text('X', 32, signatureY + 35);
+                    doc.text('_____________________________', 35, signatureY + 35);
+                    doc.text('Date:', 15, signatureY + 50);
+                    doc.text('_____________________________', 35, signatureY + 50);
+                    
+                    // Representative signature section with same spacing
+                    doc.text('Representative Authorization', doc.internal.pageSize.width/2 + 15, signatureY + 10);
+                    doc.text('Print Name:', doc.internal.pageSize.width/2 + 15, signatureY + 20);
+                    doc.text('_____________________________', doc.internal.pageSize.width/2 + 35, signatureY + 20);
+                    doc.text('Signature:', doc.internal.pageSize.width/2 + 15, signatureY + 35);
+                    doc.text('X', doc.internal.pageSize.width/2 + 32, signatureY + 35);
+                    doc.text('_____________________________', doc.internal.pageSize.width/2 + 35, signatureY + 35);
+                    doc.text('Date:', doc.internal.pageSize.width/2 + 15, signatureY + 50);
+                    doc.text('_____________________________', doc.internal.pageSize.width/2 + 35, signatureY + 50);
 
-                    // Representative signature section
-                    doc.text('Representative Authorization', doc.internal.pageSize.width/2 + 15, signatureY + 15);
-                    doc.text('Print Name:', doc.internal.pageSize.width/2 + 15, signatureY + 25);
-                    doc.text('_____________________________', doc.internal.pageSize.width/2 + 35, signatureY + 25);
-                    doc.text('Signature:', doc.internal.pageSize.width/2 + 15, signatureY + 40);
-                    doc.text('X', doc.internal.pageSize.width/2 + 32, signatureY + 40);
-                    doc.text('_____________________________', doc.internal.pageSize.width/2 + 35, signatureY + 40);
-                    doc.text('Date:', doc.internal.pageSize.width/2 + 15, signatureY + 55);
-                    doc.text('_____________________________', doc.internal.pageSize.width/2 + 35, signatureY + 55);
-
-                    // Add GST/HST number if not cash payment
-                    if (document.getElementById('paymentMethod').value !== 'cash') {
-                        doc.text('GST/HST: 743299224RT0001', doc.internal.pageSize.width/2, doc.internal.pageSize.height - 10, {
-                            align: 'center'
-                        });
-                    }
-
-                   
                     // Save PDF
                     doc.save(`invoice-${document.querySelector('[name="invoiceNumber"]').value}.pdf`);
                     alert('Invoice generated successfully!');
@@ -520,9 +569,17 @@
                     .from('estimates')
                     .select('*')
                     .eq('estimate_number', estimateNumber)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
                     .single();
 
-                if (error) throw error;
+                if (error) {
+                    if (error.code === 'PGRST116') {
+                        alert('No estimate found with this number');
+                        return;
+                    }
+                    throw error;
+                }
 
                 if (!estimates) {
                     alert('No estimate found with this number');
@@ -535,10 +592,21 @@
                 document.querySelector('[name="clientPhone"]').value = estimates.client_phone;
                 
                 // Split address back into parts
-                const [street, city] = estimates.client_address.split(', ');
+                const [street, cityAndPostal] = estimates.client_address.split(', ');
+                const [city, postal] = cityAndPostal.split(' ');
                 document.querySelector('[name="clientStreet"]').value = street;
                 document.querySelector('[name="clientCity"]').value = city;
+                document.querySelector('[name="clientPostal"]').value = postal || '';
                 
+                // Set discount information if exists
+                if (estimates.discount_type) {
+                    document.getElementById('discountType').value = estimates.discount_type;
+                    document.querySelector('[name="discountAmount"]').value = estimates.discount_amount || 0;
+                    document.querySelector('[name="afterDiscount"]').value = estimates.after_discount || 0;
+                    // Show discount row if there's a discount
+                    document.getElementById('discountRow').style.display = estimates.discount_type !== 'none' ? 'block' : 'none';
+                }
+
                 document.querySelector('[name="projectDescription"]').value = estimates.project_description;
                 document.getElementById('paymentMethod').value = estimates.payment_method;
                 
@@ -564,6 +632,8 @@
                 
                 // Update totals
                 document.querySelector('[name="subtotal"]').value = estimates.subtotal;
+                // Update discount display and calculations
+                updateDiscountInput();
                 document.querySelector('[name="tax"]').value = estimates.tax;
                 document.querySelector('[name="total"]').value = estimates.total;
 
@@ -588,13 +658,34 @@
         function calculateTotals() {
             const amounts = [...document.getElementsByName('amount[]')].map(input => Number(input.value) || 0);
             const subtotal = amounts.reduce((sum, amount) => sum + amount, 0);
+            const discountType = document.getElementById('discountType').value;
+            const discountAmount = parseFloat(document.querySelector('[name="discountAmount"]').value) || 0;
+            
+            let afterDiscount = subtotal;
+            if (discountType === 'percentage') {
+                afterDiscount = subtotal * (1 - discountAmount / 100);
+            } else if (discountType === 'fixed') {
+                afterDiscount = subtotal - discountAmount;
+            }
+
             const paymentMethod = document.getElementById('paymentMethod').value;
-            const tax = paymentMethod === 'regular' ? subtotal * 0.13 : 0;
-            const total = subtotal + tax;
+            const tax = paymentMethod === 'regular' ? afterDiscount * 0.13 : 0;
+            const total = afterDiscount + tax;
 
             document.querySelector('[name="subtotal"]').value = subtotal.toFixed(2);
+            document.querySelector('[name="afterDiscount"]').value = afterDiscount.toFixed(2);
             document.querySelector('[name="tax"]').value = tax.toFixed(2);
             document.querySelector('[name="total"]').value = total.toFixed(2);
+        }
+
+        // Add discount input handler
+        function updateDiscountInput() {
+            const discountType = document.getElementById('discountType').value;
+            const discountRow = document.getElementById('discountRow');
+            
+            // Show/hide discount amount input based on type
+            discountRow.style.display = discountType === 'none' ? 'none' : 'block';
+            calculateTotals();
         }
     </script>
 </body>
