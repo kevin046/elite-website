@@ -449,8 +449,9 @@
     <script>
         // Initialize Supabase client
         const supabaseUrl = 'https://nhcttofusmnzlertxjkq.supabase.co'
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5oY3R0b2Z1c21uemxlcnR4amtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTAyODM1NzAsImV4cCI6MjAyNTg1OTU3MH0.Nh83ebqzf1iGHTaGywss1EXF4XGvxOr4F2yQHXQnQYk'
-        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey)
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5oY3R0b2Z1c21uemxlcnR4amtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzI5NDA2MDYsImV4cCI6MjA0ODUxNjYwNn0.WA6rQWC5ISi5QiWOKbdf3wwrysBSMhEq5Lt_HXEDqEU'
+        const { createClient } = supabase
+        const supabaseClient = createClient(supabaseUrl, supabaseKey)
 
         // Generate estimate number
         function generateEstimateNumber() {
@@ -545,7 +546,7 @@
         }
 
         // Update the form submission handler
-        document.getElementById('estimateForm').addEventListener('submit', function(e) {
+        document.getElementById('estimateForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const submitButton = this.querySelector('button[type="submit"]');
@@ -553,6 +554,34 @@
             submitButton.textContent = 'Generating...';
             
             try {
+                // Prepare data for Supabase
+                const estimateData = {
+                    estimate_number: document.querySelector('[name="estimateNumber"]').value,
+                    client_name: document.querySelector('[name="clientName"]').value,
+                    client_email: document.querySelector('[name="clientEmail"]').value,
+                    client_phone: document.querySelector('[name="clientPhone"]').value,
+                    client_address: `${document.querySelector('[name="clientStreet"]').value}, ${document.querySelector('[name="clientCity"]').value}`,
+                    project_description: document.querySelector('[name="projectDescription"]').value,
+                    payment_method: document.getElementById('paymentMethod').value,
+                    subtotal: parseFloat(document.querySelector('[name="subtotal"]').value),
+                    tax: parseFloat(document.querySelector('[name="tax"]').value),
+                    total: parseFloat(document.querySelector('[name="total"]').value),
+                    line_items: [...document.querySelectorAll('.line-item')].slice(1).map(item => ({
+                        description: item.querySelector('[name="description[]"]').value,
+                        quantity: item.querySelector('[name="quantity[]"]').value,
+                        unit_price: item.querySelector('[name="unitPrice[]"]').value,
+                        amount: item.querySelector('[name="amount[]"]').value
+                    })),
+                    status: 'pending'
+                };
+
+                // Save to Supabase
+                const { data, error } = await supabaseClient
+                    .from('estimates')
+                    .insert([estimateData]);
+
+                if (error) throw error;
+
                 // Create PDF
                 window.jsPDF = window.jspdf.jsPDF;
                 const doc = new window.jsPDF();
@@ -708,7 +737,7 @@
                 
                     // Save PDF
                     doc.save(`estimate-${document.querySelector('[name="estimateNumber"]').value}.pdf`);
-                    alert('Estimate generated successfully!');
+                    alert('Estimate generated and saved successfully!');
                 };
                 
                 img.onerror = function() {
@@ -716,7 +745,7 @@
                 };
             } catch (error) {
                 console.error('Error:', error);
-                alert('Failed to generate estimate. Please try again.');
+                alert('Failed to generate or save estimate. Please try again.');
             } finally {
                 submitButton.disabled = false;
                 submitButton.textContent = 'Generate Estimate';
