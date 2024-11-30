@@ -1,0 +1,24 @@
+/* Admin Link Styles */
+.admin-section {
+    text-align: center;
+    padding: 20px;
+    background: #f5f6fa;
+}
+
+.admin-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background-color: #e74c3c;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: background-color 0.3s ease;
+}
+
+.admin-link:hover {
+    background-color: #c0392b;
+}
+
+/* Make sure your existing styles are preserved */ 

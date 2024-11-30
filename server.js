@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { generatePDF } = require('./admin/generate-pdf');
+const { generatePDF } = require('./generate-pdf');
 const fs = require('fs').promises;
 const path = require('path');
 
@@ -10,13 +10,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Serve static files
+// Serve static files from the root directory
 app.use(express.static(path.join(__dirname)));
-
-// Admin route
-app.get('/admin', (req, res) => {
-    res.sendFile(path.join(__dirname, 'admin/admin-login.html'));
-});
 
 // PDF generation endpoint
 app.post('/api/generate-pdf', async (req, res) => {
@@ -46,6 +41,15 @@ app.post('/api/generate-pdf', async (req, res) => {
             stack: error.stack 
         });
     }
+});
+
+// Admin routes
+app.get('/admin/admin-login.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'admin/admin-login.html'));
+});
+
+app.get('/admin/admin-dashboard.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'admin/admin-dashboard.html'));
 });
 
 // Start server
