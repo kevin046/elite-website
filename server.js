@@ -30,6 +30,16 @@ app.post('/api/generate-pdf', async (req, res) => {
     }
 });
 
+app.get('/api/estimates', async (req, res) => {
+    try {
+        const estimates = JSON.parse(await fs.readFile(ESTIMATES_FILE, 'utf8'));
+        res.json(estimates);
+    } catch (error) {
+        console.error('Error reading estimates:', error);
+        res.status(500).json({ error: 'Failed to load estimates' });
+    }
+});
+
 const PORT = 3000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);

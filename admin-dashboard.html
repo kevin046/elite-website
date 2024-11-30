@@ -169,18 +169,27 @@
             <p>Select an option below to generate documents</p>
         </div>
 
-        <div class="options-grid">
-            <a href="estimate-form.html" class="option-card" onclick="checkAuth(event, 'estimate')">
-                <i class="fas fa-file-invoice-dollar"></i>
-                <h2>Generate Estimate</h2>
-                <p>Create a new estimate for potential clients with detailed project specifications and costs.</p>
-            </a>
-
-            <a href="invoice-form.html" class="option-card" onclick="checkAuth(event, 'invoice')">
-                <i class="fas fa-file-invoice"></i>
-                <h2>Issue Invoice</h2>
-                <p>Generate a professional invoice for completed work with payment details and terms.</p>
-            </a>
+        <div id="generate-tab" class="tab-content">
+            <div class="options-grid">
+                <div class="option-card" onclick="window.location.href='estimate-form.html'">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                    <h2>Generate New Estimate</h2>
+                    <p>Create a new estimate for potential clients</p>
+                </div>
+        
+                <div class="option-card" onclick="window.location.href='create-invoice.html'">
+                    <i class="fas fa-file-invoice"></i>
+                    <h2>Issue Invoice</h2>
+                    <p>Generate invoice from existing estimate or create new</p>
+                </div>
+        
+                <div class="option-card" onclick="window.location.href='storage-view.html'">
+                   <i class="fas fa-database"></i>
+                   <i class="fas fa-history"></i>
+                    <h2>Storage Access</h2>
+                   <p>View and manage stored estimates and data history</p>
+                    </div>
+            </div>
         </div>
     </div>
 

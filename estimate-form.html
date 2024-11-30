@@ -386,11 +386,11 @@
                 <div class="form-group">
                     <label>Payment Method:</label>
                     <select name="paymentMethod" id="paymentMethod" onchange="updateTaxCalculation()">
-                        <option value="regular">E-Transfer</option>
-                        <option value="regular">Credit Card</option>
-                        <option value="regular">Cheque</option>
-                        <option value="regular">Bank Draft</option>
                         <option value="cash">Cash Payment (Tax Free)</option>
+                        <option value="cash">E-Transfer (weiye8386@gmail.com) (Tax Free)</option>
+                        <option value="regular">Credit Card 3.5% surcharge</option>
+                        <option value="regular">Cheque (Please make cheques payable to Elite Renovation Works)</option>
+                        <option value="regular">Bank Draft (Please make bank drafts payable to Elite Renovation Works)</option>                        
                     </select>
                 </div>
 
@@ -429,6 +429,7 @@
                         <li>Final Payment: Remaining balance due upon project completion</li>
                     </ul>
                     <p class="payment-disclaimer">
+                        * This estimate is valid for 15 days from the date of issue.<br>
                         * All payments must be made within 5 business days of reaching each milestone.<br>
                         * Work will commence upon receipt of first payment and signed contract.<br>
                         * Any changes to the scope of work may affect the final price.
@@ -519,7 +520,7 @@
         function updateTaxCalculation() {
             const paymentMethod = document.getElementById('paymentMethod').value;
             const taxSection = document.getElementById('taxSection');
-            taxSection.style.display = paymentMethod === 'cash' ? 'none' : 'block';
+            taxSection.style.display = paymentMethod === 'regular' ? 'block' : 'none';
             calculateTotals();
         }
 
@@ -528,7 +529,7 @@
             const amounts = [...document.getElementsByName('amount[]')].map(input => Number(input.value) || 0);
             const subtotal = amounts.reduce((sum, amount) => sum + amount, 0);
             const paymentMethod = document.getElementById('paymentMethod').value;
-            const tax = paymentMethod === 'cash' ? 0 : subtotal * 0.13;
+            const tax = paymentMethod === 'regular' ? subtotal * 0.13 : 0;
             const total = subtotal + tax;
 
             document.querySelector('[name="subtotal"]').value = subtotal.toFixed(2);
@@ -657,18 +658,33 @@
                     doc.text('• Second Payment: 1/3 of total amount due at 50% project completion', 20, finalY + 27);
                     doc.text('• Final Payment: Remaining balance due upon project completion', 20, finalY + 34);
 
+                        // Add validity period notice
+                        doc.setTextColor(231, 76, 60); // Red color for emphasis
+                    doc.text('* This estimate is valid for 15 days from the date of issue.', 15, doc.internal.pageSize.height - 40);
+
+
                     // Update footer position and alignment
                     doc.setFontSize(9);
                     doc.setTextColor(100, 100, 100);
                     const pageWidth = doc.internal.pageSize.width;
+
+                    // Add GST/HST number if not cash payment
+                    const paymentMethod = document.getElementById('paymentMethod').value;
+                    if (paymentMethod !== 'cash') {
+                        doc.text('GST/HST: 743299224RT0001', pageWidth/2, doc.internal.pageSize.height - 10, {
+                            align: 'center'
+                        });
+                    }
+
                     doc.text([
                         'Thank you for choosing Elite Renovation Works!',
                         'For questions, please contact Jay at 647-563-1314'
-                    ], pageWidth - 15, doc.internal.pageSize.height - 20, {
+                    ], pageWidth - 15, doc.internal.pageSize.height - 30, {
                         align: 'right',
                         lineHeightFactor: 1.5
                     });
 
+                
                     // Save PDF
                     doc.save(`estimate-${document.querySelector('[name="estimateNumber"]').value}.pdf`);
                     alert('Estimate generated successfully!');
