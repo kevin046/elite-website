@@ -179,6 +179,48 @@
             
             // Set current date
             document.querySelector('[name="invoiceDate"]').value = new Date().toLocaleDateString();
+
+            // Check for edit data
+            const editData = sessionStorage.getItem('editEstimateData');
+            if (editData) {
+                const estimate = JSON.parse(editData);
+                
+                // Fill in form fields
+                document.querySelector('[name="estimateNumber"]').value = estimate.estimate_number;
+                document.querySelector('[name="clientName"]').value = estimate.client_name;
+                document.querySelector('[name="clientEmail"]').value = estimate.client_email;
+                document.querySelector('[name="clientPhone"]').value = estimate.client_phone;
+                
+                // Split address back into parts
+                const [street, city] = estimate.client_address.split(', ');
+                document.querySelector('[name="clientStreet"]').value = street;
+                document.querySelector('[name="clientCity"]').value = city;
+                
+                document.querySelector('[name="projectDescription"]').value = estimate.project_description;
+                document.getElementById('paymentMethod').value = estimate.payment_method;
+                
+                // Add line items
+                estimate.line_items.forEach(item => {
+                    const lineItem = document.createElement('div');
+                    lineItem.className = 'line-item';
+                    lineItem.innerHTML = `
+                        <input type="text" name="description[]" value="${item.description}" required>
+                        <input type="number" name="quantity[]" value="${item.quantity}" required>
+                        <input type="number" name="unitPrice[]" value="${item.unit_price}" required>
+                        <input type="number" name="amount[]" value="${item.amount}" readonly>
+                        <button type="button" class="remove-item" onclick="this.parentElement.remove(); calculateTotals();">×</button>
+                    `;
+                    document.getElementById('lineItems').appendChild(lineItem);
+                });
+                
+                // Update totals
+                document.querySelector('[name="subtotal"]').value = estimate.subtotal;
+                document.querySelector('[name="tax"]').value = estimate.tax;
+                document.querySelector('[name="total"]').value = estimate.total;
+                
+                // Clear the stored data
+                sessionStorage.removeItem('editEstimateData');
+            }
         });
 
         function generateInvoiceNumber() {

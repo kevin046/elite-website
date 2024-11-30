@@ -4,6 +4,8 @@
     <title>Storage Data - Elite Renovation Works</title>
     <link rel="icon" type="image/x-icon" href="https://i.ibb.co/M58mL0J/transparent-elite-home.png">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     <script>
         // Initialize Supabase Client
         const supabaseUrl = 'https://nhcttofusmnzlertxjkq.supabase.co'
@@ -91,8 +93,147 @@
 
                 if (error) throw error;
 
-                // Generate PDF or show details
-                // Add your PDF generation code here
+                // Create PDF
+                window.jsPDF = window.jspdf.jsPDF;
+                const doc = new window.jsPDF();
+                
+                // Add company logo
+                const img = new Image();
+                img.src = 'https://i.ibb.co/M58mL0J/transparent-elite-home.png';
+                
+                img.onload = function() {
+                    // Add logo with proper scaling
+                    const imgWidth = 70;
+                    const imgHeight = (img.height * imgWidth) / img.width;
+                    doc.addImage(img, 'PNG', 15, 10, imgWidth, imgHeight);
+                    
+                    // Add company info in top right
+                    doc.setFontSize(14);
+                    doc.text('Elite Renovation Works', doc.internal.pageSize.width - 15, 20, { align: 'right' });
+                    doc.setFontSize(9);
+                    doc.text([
+                        '6 Interlacken Way',
+                        'Markham, Ontario L3R 5H9',
+                        'Representative: Jay',
+                        'Phone: 647-563-1314',
+                        'Email: jay@eliterenovationworks.ca'
+                    ], doc.internal.pageSize.width - 15, 25, { 
+                        align: 'right',
+                        lineHeightFactor: 1.5
+                    });
+                    
+                    // Add estimate details with smaller font (moved down)
+                    doc.setFontSize(10);
+                    doc.text('Estimate #: ' + estimate.estimate_number, 15, imgHeight + 25);
+                    doc.text('Date: ' + new Date(estimate.created_at).toLocaleDateString(), doc.internal.pageSize.width - 15, imgHeight + 25, { align: 'right' });
+
+                    // Add separator line under estimate details
+                    doc.setDrawColor(44, 62, 80); // Dark blue color matching table header
+                    doc.setLineWidth(0.5);
+                    doc.line(15, imgHeight + 35, doc.internal.pageSize.width - 15, imgHeight + 35);
+
+                    // Continue with client info (adjusted Y positions)
+                    doc.setFontSize(11);
+                    doc.text('Client Information:', 15, imgHeight + 50);
+                    doc.setFontSize(10);
+                    doc.text('Name: ' + estimate.client_name, 20, imgHeight + 60);
+                    doc.text('Phone: ' + estimate.client_phone, 20, imgHeight + 67);
+                    doc.text('Email: ' + estimate.client_email, 20, imgHeight + 74);
+                    doc.text('Address: ' + estimate.client_address, 20, imgHeight + 81);
+
+                    // Add project description
+                    doc.setFontSize(11);
+                    doc.text('Project Description:', 15, imgHeight + 95);
+                    doc.setFontSize(10);
+                    doc.text(estimate.project_description, 20, imgHeight + 105);
+
+                    // Update the starting Y position for the table
+                    doc.autoTable({
+                        startY: imgHeight + 120,
+                        head: [['Description', 'Quantity', 'Unit Price', 'Amount']],
+                        body: estimate.line_items.map(item => [
+                            item.description,
+                            item.quantity,
+                            '$' + item.unit_price,
+                            '$' + item.amount
+                        ]),
+                        foot: [
+                            ['', '', 'Subtotal:', '$' + estimate.subtotal],
+                            ['', '', 'Tax (13%):', '$' + estimate.tax],
+                            ['', '', 'Total:', '$' + estimate.total]
+                        ],
+                        theme: 'grid',
+                        headStyles: { 
+                            fillColor: [44, 62, 80],
+                            fontSize: 11,
+                            halign: 'center',
+                            textColor: [255, 255, 255]
+                        },
+                        bodyStyles: { 
+                            fontSize: 10,
+                            lineColor: [200, 200, 200],
+                            textColor: [44, 62, 80]
+                        },
+                        footStyles: { 
+                            fillColor: [249, 249, 249],
+                            fontSize: 10,
+                            fontStyle: 'bold',
+                            halign: 'right',
+                            textColor: [44, 62, 80]
+                        },
+                        columnStyles: {
+                            0: { cellWidth: 'auto' },
+                            1: { cellWidth: 30, halign: 'center' },
+                            2: { cellWidth: 40, halign: 'right' },
+                            3: { cellWidth: 40, halign: 'right' }
+                        }
+                    });
+
+                    // Add payment info
+                    const finalY = doc.lastAutoTable.finalY + 15;
+                    doc.setFontSize(10);
+                    doc.text('Payment Method: ' + estimate.payment_method, 15, finalY);
+                    doc.text('Payment Schedule:', 15, finalY + 10);
+                    doc.setFontSize(9);
+
+                    // Calculate payment amounts
+                    const totalAmount = parseFloat(estimate.total);
+                    const firstPayment = Math.round(totalAmount / 3);
+                    const secondPayment = Math.round(totalAmount / 3);
+                    const finalPayment = totalAmount - firstPayment - secondPayment;
+
+                    doc.text([
+                        `• First Payment: $${firstPayment.toFixed(2)} due upon signing contract`,
+                        `• Second Payment: $${secondPayment.toFixed(2)} due at 50% project completion`,
+                        `• Final Payment: $${finalPayment.toFixed(2)} due upon project completion`
+                    ], 20, finalY + 20, {
+                        lineHeightFactor: 1.5
+                    });
+
+                    // Add validity period notice
+                    doc.setTextColor(231, 76, 60); // Red color for emphasis
+                    doc.text('* This estimate is valid for 15 days from the date of issue.', 15, doc.internal.pageSize.height - 40);
+
+                    // Add GST/HST number if not cash payment
+                    if (estimate.payment_method !== 'cash') {
+                        doc.text('GST/HST: 743299224RT0001', doc.internal.pageSize.width/2, doc.internal.pageSize.height - 10, {
+                            align: 'center'
+                        });
+                    }
+
+                    // Add footer
+                    doc.setTextColor(100, 100, 100);
+                    doc.text([
+                        'Thank you for choosing Elite Renovation Works!',
+                        'For questions, please contact Jay at 647-563-1314'
+                    ], doc.internal.pageSize.width - 15, doc.internal.pageSize.height - 30, {
+                        align: 'right',
+                        lineHeightFactor: 1.5
+                    });
+
+                    // Save PDF
+                    doc.save(`estimate-${estimate.estimate_number}.pdf`);
+                };
             } catch (error) {
                 console.error('Error viewing estimate:', error);
                 alert('Failed to view estimate');
@@ -100,9 +241,39 @@
         }
 
         // Edit estimate function
-        function editEstimate(id) {
-            sessionStorage.setItem('editEstimateId', id);
-            window.location.href = 'estimate-form.html';
+        async function editEstimate(id) {
+            try {
+                // Get estimate data
+                const { data: estimate, error } = await supabaseClient
+                    .from('estimates')
+                    .select('*')
+                    .eq('id', id)
+                    .single();
+
+                if (error) throw error;
+
+                // Store full estimate data in sessionStorage
+                sessionStorage.setItem('editEstimateData', JSON.stringify({
+                    estimate_number: estimate.estimate_number,
+                    client_name: estimate.client_name,
+                    client_email: estimate.client_email,
+                    client_phone: estimate.client_phone,
+                    client_address: estimate.client_address,
+                    project_description: estimate.project_description,
+                    payment_method: estimate.payment_method,
+                    subtotal: estimate.subtotal,
+                    tax: estimate.tax,
+                    total: estimate.total,
+                    line_items: estimate.line_items,
+                    status: estimate.status
+                }));
+
+                // Redirect to estimate-form.html in the same directory
+                window.location.href = 'estimate-form.html';
+            } catch (error) {
+                console.error('Error loading estimate for edit:', error);
+                alert('Failed to load estimate for editing');
+            }
         }
     </script>
     <style>
