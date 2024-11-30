@@ -24,6 +24,10 @@
                 let query = supabaseClient
                     .from('estimates')
                     .select('*')
+                    .select('*', { 
+                        head: true,
+                        orderBy: [{ column: 'created_at', order: 'desc' }] 
+                    })
                     .order('created_at', { ascending: false });
 
                 // Add date filters if set
@@ -45,7 +49,19 @@
                 const tbody = document.getElementById('storageData');
                 tbody.innerHTML = '';
 
+                // Create a map to store latest version of each estimate
+                const latestEstimates = new Map();
+                
+                // Process estimates to keep only latest version
                 estimates.forEach(estimate => {
+                    if (!latestEstimates.has(estimate.estimate_number) || 
+                        new Date(estimate.created_at) > new Date(latestEstimates.get(estimate.estimate_number).created_at)) {
+                        latestEstimates.set(estimate.estimate_number, estimate);
+                    }
+                });
+
+                // Display only the latest versions
+                Array.from(latestEstimates.values()).forEach(estimate => {
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td>${new Date(estimate.created_at).toLocaleDateString()}</td>
