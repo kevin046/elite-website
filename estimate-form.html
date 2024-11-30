@@ -1,8 +1,12 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Generate Estimate - Elite Renovation Works</title>
+    <title>Quote Estimate - Elite Renovation Works</title>
     <link rel="icon" type="image/x-icon" href="https://i.ibb.co/M58mL0J/transparent-elite-home.png">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     <style>
         body { 
             font-family: Arial, sans-serif;
@@ -19,9 +23,33 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         .form-header {
-            margin-bottom: 30px;
-            padding-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 10px 20px;
+            background-color: #f8f9fa;
             border-bottom: 2px solid #e74c3c;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .header-right label {
+            font-weight: 500;
+            color: #2c3e50;
+        }
+        .current-date {
+            font-size: 16px;
+            color: #2c3e50;
+            font-weight: 500;
+            min-width: 100px;
         }
         .company-logo {
             max-width: 300px;
@@ -241,13 +269,44 @@
                 max-width: 800px;
             }
         }
+
+        .estimate-number-section {
+            margin: 20px 0;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .estimate-number-section .form-group {
+            max-width: 300px;
+        }
+
+        #gstSection, #chequeSection {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        #gstSection input, #chequeSection input {
+            background-color: #fff;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+
+        .note {
+            display: block;
+            color: #e74c3c;
+            font-size: 14px;
+            margin-top: 5px;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
     <div class="form-container">
         <div class="form-header">
             <img src="https://i.ibb.co/M58mL0J/transparent-elite-home.png" alt="Elite Renovation Works Logo" class="company-logo">
-            <h1 class="section-title">Generate Estimate</h1>
+            <h1 class="section-title">Estimate</h1>
             <div class="company-info-small">
                 <p><strong>Elite Renovation Works</strong></p>
                 <p>Jay | 647-563-1314</p>
@@ -257,6 +316,8 @@
         </div>
         
         <form id="estimateForm">
+            <label>Estimate #:</label>
+                    <input type="text" name="estimateNumber" readonly>
             <!-- Client Information -->
             <div class="form-section">
                 <h2 class="section-title">Client Information</h2>
@@ -312,22 +373,7 @@
             <!-- Project Details -->
             <div class="form-section">
                 <h2 class="section-title">Project Details</h2>
-                <div class="form-group">
-                    <label>Estimate Number:</label>
-                    <input type="text" name="estimateNumber" readonly>
-                </div>
-                <div class="form-group">
-                    <label>Service Type:</label>
-                    <select name="serviceType" required>
-                        <option value="">Select Service</option>
-                        <option value="Kitchen Renovation">Kitchen Renovation</option>
-                        <option value="Bathroom Renovation">Bathroom Renovation</option>
-                        <option value="Painting">Painting</option>
-                        <option value="Flooring">Flooring</option>
-                        <option value="Drywall">Drywall</option>
-                        <option value="Roofing">Roofing</option>
-                        <option value="Other">Other (Specify)</option>
-                    </select>
+                <div class="form-group">        
                 </div>
                 <div class="form-group">
                     <label>Project Description:</label>
@@ -341,11 +387,11 @@
                 <div class="form-group">
                     <label>Payment Method:</label>
                     <select name="paymentMethod" id="paymentMethod" onchange="updateTaxCalculation()">
-                        <option value="regular">E-Transfer</option>
-                        <option value="regular">Credit Card</option>
-                        <option value="regular">Cheque</option>
-                        <option value="regular">Bank Draft</option>
                         <option value="cash">Cash Payment (Tax Free)</option>
+                        <option value="cash">E-Transfer (weiye8386@gmail.com) (Tax Free)</option>
+                        <option value="regular">Credit Card 3.5% surcharge</option>
+                        <option value="regular">Cheque (Please make cheques payable to Elite Renovation Works)</option>
+                        <option value="regular">Bank Draft (Please make bank drafts payable to Elite Renovation Works)</option>                        
                     </select>
                 </div>
 
@@ -365,10 +411,29 @@
                         <label>Subtotal:</label>
                         <input type="number" name="subtotal" readonly>
                     </div>
-                    <div class="form-group" id="taxSection">
-                        <label>HST (13%):</label>
-                        <input type="number" name="tax" readonly>
+                    <div class="form-group">
+                        <label>Discount Type:</label>
+                        <select name="discountType" id="discountType" onchange="updateDiscountInput()">
+                            <option value="none">No Discount</option>
+                            <option value="percentage">Percentage (%)</option>
+                            <option value="fixed">Fixed Amount ($)</option>
+                        </select>
                     </div>
+                </div>
+
+                <div class="form-row" id="discountRow" style="display: none;">
+                    <div class="form-group">
+                        <label id="discountLabel">Discount Amount:</label>
+                        <input type="number" name="discountAmount" value="0" min="0" max="100" step="1" onchange="calculateTotals()">
+                    </div>
+                    <div class="form-group">
+                        <label>After Discount:</label>
+                        <input type="number" name="afterDiscount" readonly>
+                    </div>
+                </div>
+                <div class="form-group" id="taxSection">
+                    <label>HST (13%):</label>
+                    <input type="number" name="tax" readonly>
                 </div>
                 <div class="form-group">
                     <label>Total:</label>
@@ -384,6 +449,7 @@
                         <li>Final Payment: Remaining balance due upon project completion</li>
                     </ul>
                     <p class="payment-disclaimer">
+                        * This estimate is valid for 15 days from the date of issue.<br>
                         * All payments must be made within 5 business days of reaching each milestone.<br>
                         * Work will commence upon receipt of first payment and signed contract.<br>
                         * Any changes to the scope of work may affect the final price.
@@ -391,23 +457,76 @@
                 </div>
             </div>
 
-            <button type="submit">Generate Estimate PDF</button>
+            <div class="form-actions">
+                <button type="submit" class="cta-button submit-button">
+                    Generate Estimate
+                </button>
+            </div>
         </form>
     </div>
 
     <script>
-        // Generate estimate number
-        document.addEventListener('DOMContentLoaded', function() {
-            function generateEstimateNumber() {
-                const today = new Date();
-                const year = today.getFullYear();
-                const month = (today.getMonth() + 1).toString().padStart(2, '0');
-                const day = today.getDate().toString().padStart(2, '0');
-                const randomNum = Math.floor(Math.random() * (9999 - 1000 + 1) + 1000);
-                return `EST-${year}${month}${day}-${randomNum}`;
-            }
+        // Initialize Supabase client
+        const supabaseUrl = 'https://nhcttofusmnzlertxjkq.supabase.co'
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5oY3R0b2Z1c21uemxlcnR4amtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzI5NDA2MDYsImV4cCI6MjA0ODUxNjYwNn0.WA6rQWC5ISi5QiWOKbdf3wwrysBSMhEq5Lt_HXEDqEU'
+        const { createClient } = supabase
+        const supabaseClient = createClient(supabaseUrl, supabaseKey)
 
-            document.querySelector('[name="estimateNumber"]').value = generateEstimateNumber();
+        // Generate estimate number
+        function generateEstimateNumber() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = (today.getMonth() + 1).toString().padStart(2, '0');
+            const day = today.getDate().toString().padStart(2, '0');
+            const randomNum = Math.floor(Math.random() * (9999 - 1000 + 1) + 1000);
+            return `EST-${year}${month}${day}-${randomNum}`;
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check for edit data
+            const editData = sessionStorage.getItem('editEstimateData');
+            if (editData) {
+                const estimate = JSON.parse(editData);
+                
+                // Fill in form fields
+                document.querySelector('[name="estimateNumber"]').value = estimate.estimate_number;
+                document.querySelector('[name="clientName"]').value = estimate.client_name;
+                document.querySelector('[name="clientEmail"]').value = estimate.client_email;
+                document.querySelector('[name="clientPhone"]').value = estimate.client_phone;
+                
+                // Split address back into parts
+                const [street, city] = estimate.client_address.split(', ');
+                document.querySelector('[name="clientStreet"]').value = street;
+                document.querySelector('[name="clientCity"]').value = city;
+                
+                document.querySelector('[name="projectDescription"]').value = estimate.project_description;
+                document.getElementById('paymentMethod').value = estimate.payment_method;
+                
+                // Add line items
+                estimate.line_items.forEach(item => {
+                    const lineItem = document.createElement('div');
+                    lineItem.className = 'line-item';
+                    lineItem.innerHTML = `
+                        <input type="text" name="description[]" value="${item.description}" required>
+                        <input type="number" name="quantity[]" value="${item.quantity}" required>
+                        <input type="number" name="unitPrice[]" value="${item.unit_price}" required>
+                        <input type="number" name="amount[]" value="${item.amount}" readonly>
+                        <button type="button" class="remove-item" onclick="this.parentElement.remove(); calculateTotals();">×</button>
+                    `;
+                    document.getElementById('lineItems').appendChild(lineItem);
+                });
+                
+                // Update totals
+                document.querySelector('[name="subtotal"]').value = estimate.subtotal;
+                document.querySelector('[name="tax"]').value = estimate.tax;
+                document.querySelector('[name="total"]').value = estimate.total;
+                
+                // Clear the stored data
+                sessionStorage.removeItem('editEstimateData');
+            } else {
+                // Generate new estimate number only if not editing
+                document.querySelector('[name="estimateNumber"]').value = generateEstimateNumber();
+            }
 
             // Handle city selection
             const citySelect = document.querySelector('[name="clientCity"]');
@@ -470,7 +589,7 @@
         function updateTaxCalculation() {
             const paymentMethod = document.getElementById('paymentMethod').value;
             const taxSection = document.getElementById('taxSection');
-            taxSection.style.display = paymentMethod === 'cash' ? 'none' : 'block';
+            taxSection.style.display = paymentMethod === 'regular' ? 'block' : 'none';
             calculateTotals();
         }
 
@@ -478,11 +597,35 @@
         function calculateTotals() {
             const amounts = [...document.getElementsByName('amount[]')].map(input => Number(input.value) || 0);
             const subtotal = amounts.reduce((sum, amount) => sum + amount, 0);
+            const discountType = document.getElementById('discountType').value;
+            const discountAmount = parseFloat(document.querySelector('[name="discountAmount"]').value) || 0;
+            
+            // Validate percentage input
+            if (discountType === 'percentage' && discountAmount > 100) {
+                document.querySelector('[name="discountAmount"]').value = 100;
+                return calculateTotals();
+            }
+            
+            // Validate fixed amount input
+            if (discountType === 'fixed' && discountAmount > subtotal) {
+                document.querySelector('[name="discountAmount"]').value = subtotal;
+                alert('Discount amount cannot exceed subtotal');
+                return calculateTotals();
+            }
+
+            let afterDiscount = subtotal;
+            if (discountType === 'percentage') {
+                afterDiscount = subtotal * (1 - discountAmount / 100);
+            } else if (discountType === 'fixed') {
+                afterDiscount = subtotal - discountAmount;
+            }
+            
             const paymentMethod = document.getElementById('paymentMethod').value;
-            const tax = paymentMethod === 'cash' ? 0 : subtotal * 0.13;
-            const total = subtotal + tax;
+            const tax = paymentMethod === 'regular' ? afterDiscount * 0.13 : 0;
+            const total = afterDiscount + tax;
 
             document.querySelector('[name="subtotal"]').value = subtotal.toFixed(2);
+            document.querySelector('[name="afterDiscount"]').value = afterDiscount.toFixed(2);
             document.querySelector('[name="tax"]').value = tax.toFixed(2);
             document.querySelector('[name="total"]').value = total.toFixed(2);
         }
@@ -491,90 +634,290 @@
         document.getElementById('estimateForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            // Show loading state
             const submitButton = this.querySelector('button[type="submit"]');
             submitButton.disabled = true;
             submitButton.textContent = 'Generating...';
             
             try {
-                // Collect form data
-                const formData = new FormData(this);
-                const data = Object.fromEntries(formData);
-                
-                // Send request to generate PDF
-                const response = await fetch('http://localhost:3000/api/generate-pdf', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        templateType: 'estimation',
-                        data: data
-                    })
-                });
+                // Prepare data for Supabase
+                const estimateData = {
+                    estimate_number: document.querySelector('[name="estimateNumber"]').value,
+                    client_name: document.querySelector('[name="clientName"]').value,
+                    client_email: document.querySelector('[name="clientEmail"]').value,
+                    client_phone: document.querySelector('[name="clientPhone"]').value,
+                    client_address: `${document.querySelector('[name="clientStreet"]').value}, ${document.querySelector('[name="clientCity"]').value}`,
+                    project_description: document.querySelector('[name="projectDescription"]').value,
+                    payment_method: document.getElementById('paymentMethod').value,
+                    subtotal: parseFloat(document.querySelector('[name="subtotal"]').value),
+                    tax: parseFloat(document.querySelector('[name="tax"]').value),
+                    total: parseFloat(document.querySelector('[name="total"]').value),
+                    line_items: [...document.querySelectorAll('.line-item')].slice(1).map(item => ({
+                        description: item.querySelector('[name="description[]"]').value,
+                        quantity: item.querySelector('[name="quantity[]"]').value,
+                        unit_price: item.querySelector('[name="unitPrice[]"]').value,
+                        amount: item.querySelector('[name="amount[]"]').value
+                    })),
+                    status: 'pending'
+                };
 
-                if (!response.ok) {
-                    throw new Error('Failed to generate PDF');
+                // Check if estimate exists
+                const { data: existingEstimate, error: checkError } = await supabaseClient
+                    .from('estimates')
+                    .select('id')
+                    .eq('estimate_number', estimateData.estimate_number)
+                    .single();
+
+                let error;
+                if (existingEstimate) {
+                    // Update existing estimate
+                    const { error: updateError } = await supabaseClient
+                        .from('estimates')
+                        .update(estimateData)
+                        .eq('id', existingEstimate.id);
+                    error = updateError;
+                } else {
+                    // Insert new estimate
+                    const { error: insertError } = await supabaseClient
+                        .from('estimates')
+                        .insert([estimateData]);
+                    error = insertError;
                 }
 
-                // Get PDF blob
-                const blob = await response.blob();
+                if (error) {
+                    console.error('Error:', error);
+                    throw error;
+                }
+
+                // Create PDF
+                window.jsPDF = window.jspdf.jsPDF;
+                const doc = new window.jsPDF();
                 
-                // Create modal for options
-                const modal = document.createElement('div');
-                modal.className = 'modal';
-                modal.innerHTML = `
-                    <div class="modal-content">
-                        <h3>Document Generated Successfully</h3>
-                        <div class="modal-buttons">
-                            <button onclick="printPDF('${URL.createObjectURL(blob)}')" class="print-btn">
-                                <i class="fas fa-print"></i> Print Document
-                            </button>
-                            <button onclick="downloadPDF('${URL.createObjectURL(blob)}', 'estimate-${data.estimateNumber}.pdf')" class="download-btn">
-                                <i class="fas fa-download"></i> Download PDF
-                            </button>
-                            <button onclick="closeModal(this)" class="close-btn">
-                                <i class="fas fa-times"></i> Close
-                            </button>
-                        </div>
-                    </div>
-                `;
-                document.body.appendChild(modal);
+                // Add company logo
+                const logoUrl = 'https://i.ibb.co/M58mL0J/transparent-elite-home.png';
                 
+                // Load and add logo
+                const img = new Image();
+                img.src = logoUrl;
+                img.onload = function() {
+                    // Add logo with proper scaling
+                    const imgWidth = 70;
+                    const imgHeight = (img.height * imgWidth) / img.width;
+                    doc.addImage(img, 'PNG', 15, 10, imgWidth, imgHeight);
+                    
+                    // Add ESTIMATE title in center
+                    doc.setFontSize(20);
+                    doc.setTextColor(44, 62, 80);  // Dark blue color
+                    doc.text('ESTIMATE', doc.internal.pageSize.width/2, 20, { align: 'center' });
+                    
+                    // Add company info in top right
+                    doc.setFontSize(9);
+                    doc.text([
+                        '6 Interlacken Way',
+                        'Markham, Ontario L3R 5H9',
+                        'Representative: Jay',
+                        'Phone: 647-563-1314',
+                        'Email: jay@eliterenovationworks.ca',
+                        document.getElementById('paymentMethod').value !== 'cash' ? 'GST/HST: 743299224RT0001' : ''
+                    ], doc.internal.pageSize.width - 15, 25, { 
+                        align: 'right',
+                        lineHeightFactor: 1.5
+                    });
+                    
+                    // Add estimate details with smaller font
+                    doc.setFontSize(10);
+                    doc.text('Estimate #: ' + document.querySelector('[name="estimateNumber"]').value, 15, imgHeight + 25);
+                    doc.text('Date: ' + new Date().toLocaleDateString(), doc.internal.pageSize.width - 15, imgHeight + 25, { align: 'right' });
+
+                    // Add separator line
+                    doc.setDrawColor(44, 62, 80);
+                    doc.setLineWidth(0.5);
+                    doc.line(15, imgHeight + 35, doc.internal.pageSize.width - 15, imgHeight + 35);
+
+                    // Add client info with optimized spacing
+                    doc.setFontSize(11);
+                    doc.text('Client Details:', 15, imgHeight + 45);
+                    doc.setFontSize(10);
+                    doc.text([
+                        'Name: ' + document.querySelector('[name="clientName"]').value,
+                        'Email: ' + document.querySelector('[name="clientEmail"]').value
+                    ], 20, imgHeight + 55);
+                    doc.text([
+                        'Phone: ' + document.querySelector('[name="clientPhone"]').value,
+                        'Address: ' + document.querySelector('[name="clientStreet"]').value + ', ' + 
+                        document.querySelector('[name="clientCity"]').value + ' ' +
+                        document.querySelector('[name="clientPostal"]').value
+                    ], doc.internal.pageSize.width/2, imgHeight + 55);
+
+                    // Add project description more compactly
+                    doc.text('Project: ' + document.querySelector('[name="projectDescription"]').value, 20, imgHeight + 70);
+
+                    // Update table position to start earlier
+                    doc.autoTable({
+                        startY: imgHeight + 80,
+                        head: [['Description', 'Quantity', 'Unit Price', 'Amount']],
+                        body: [...document.querySelectorAll('.line-item')].slice(1).map(item => [
+                            item.querySelector('[name="description[]"]').value,
+                            item.querySelector('[name="quantity[]"]').value,
+                            '$' + item.querySelector('[name="unitPrice[]"]').value,
+                            '$' + item.querySelector('[name="amount[]"]').value
+                        ]),
+                        foot: [
+                            ['', '', 'Subtotal:', '$' + document.querySelector('[name="subtotal"]').value],
+                            ...(document.getElementById('discountType').value !== 'none' ? [
+                                [
+                                    '', 
+                                    '', 
+                                    document.getElementById('discountType').value === 'percentage' ?
+                                        `Discount (${document.querySelector('[name="discountAmount"]').value}%):` :
+                                        'Discount:',
+                                    '-$' + (document.querySelector('[name="subtotal"]').value - 
+                                        document.querySelector('[name="afterDiscount"]').value).toFixed(2)
+                                ],
+                                [
+                                    '', 
+                                    '', 
+                                    'After Discount:', 
+                                    '$' + document.querySelector('[name="afterDiscount"]').value
+                                ]
+                            ] : []),
+                            ['', '', 'Tax (13%):', '$' + document.querySelector('[name="tax"]').value],
+                            ['', '', 'Total:', '$' + document.querySelector('[name="total"]').value]
+                        ],
+                        theme: 'grid',
+                        headStyles: { 
+                            fillColor: [44, 62, 80],
+                            fontSize: 11,
+                            halign: 'center',
+                            textColor: [255, 255, 255]
+                        },
+                        bodyStyles: { 
+                            fontSize: 10,
+                            lineColor: [200, 200, 200],
+                            textColor: [44, 62, 80]
+                        },
+                        footStyles: { 
+                            fillColor: [249, 249, 249],
+                            fontSize: 10,
+                            fontStyle: 'bold',
+                            halign: 'right',
+                            textColor: [44, 62, 80]
+                        },
+                        columnStyles: {
+                            0: { cellWidth: 'auto' },
+                            1: { cellWidth: 30, halign: 'center' },
+                            2: { cellWidth: 40, halign: 'right' },
+                            3: { cellWidth: 40, halign: 'right' }
+                        }
+                    });
+
+                    // Add payment info with improved formatting
+                    const finalY = doc.lastAutoTable.finalY + 15;
+                    doc.setFontSize(10);
+                    const paymentMethodSelect = document.getElementById('paymentMethod');
+                    const paymentMethodText = paymentMethodSelect.options[paymentMethodSelect.selectedIndex].text;
+                    doc.text('Payment Method: ' + paymentMethodText, 15, finalY);
+                    doc.text('Payment Schedule:', 15, finalY + 10);
+                    doc.setFontSize(9);
+
+                    // Calculate payment amounts
+                    const totalAmount = parseFloat(document.querySelector('[name="total"]').value);
+                    const firstPayment = Math.round(totalAmount / 3);  // Round to nearest dollar
+                    const secondPayment = Math.round(totalAmount / 3); // Round to nearest dollar
+                    const finalPayment = totalAmount - firstPayment - secondPayment; // Remaining balance
+                    
+                    // Format amounts to 2 decimal places
+                    const formatAmount = (amount) => '$' + amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                    
+                    // Display payment schedule with exact amounts
+                    doc.setTextColor(0, 0, 0);  // Set to black for payment schedule
+                    doc.text([
+                        `• First Payment: ${formatAmount(firstPayment)} due upon signing contract`,
+                        `• Second Payment: ${formatAmount(secondPayment)} due at 50% project completion`,
+                        `• Final Payment: ${formatAmount(finalPayment)} due upon project completion`,
+                    ], 20, finalY + 20, {
+                        lineHeightFactor: 1.5
+                    });
+
+                    // Add disclaimer in red
+                    doc.setTextColor(231, 76, 60);  // Set to red for disclaimer
+                    doc.text('* This estimate is valid for 15 days from the date of issue.', 20, finalY + 50);
+                    doc.setTextColor(0, 0, 0);  // Reset back to black
+
+                    // Update footer position and alignment
+                    doc.setFontSize(9);
+                    doc.setTextColor(100, 100, 100);
+                    const pageWidth = doc.internal.pageSize.width;
+
+                    // Add GST/HST number if not cash payment
+                    const paymentMethod = document.getElementById('paymentMethod').value;
+                    if (paymentMethod !== 'cash') {
+                        doc.text('GST/HST: 743299224RT0001', pageWidth/2, doc.internal.pageSize.height - 10, {
+                            align: 'center'
+                        });
+                    }
+
+                                  
+                    // Save PDF
+                    doc.save(`estimate-${document.querySelector('[name="estimateNumber"]').value}.pdf`);
+                    alert('Estimate generated and saved successfully!');
+                };
+                
+                img.onerror = function() {
+                    throw new Error('Failed to load company logo');
+                };
             } catch (error) {
                 console.error('Error:', error);
-                alert('Failed to generate estimate. Please try again.');
+                alert('Failed to generate or save estimate. Please try again.');
             } finally {
                 submitButton.disabled = false;
                 submitButton.textContent = 'Generate Estimate';
             }
         });
 
-        // Helper functions for PDF actions
-        function printPDF(url) {
-            const iframe = document.createElement('iframe');
-            iframe.style.display = 'none';
-            iframe.src = url;
-            document.body.appendChild(iframe);
-            iframe.contentWindow.print();
-        }
+        // Revert discount type handler changes
+        function updateDiscountInput() {
+            const discountType = document.getElementById('discountType').value;
+            const discountRow = document.getElementById('discountRow');
+            const discountLabel = document.getElementById('discountLabel');
+            const discountInput = document.querySelector('[name="discountAmount"]');
 
-        function downloadPDF(url, filename) {
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-
-        function closeModal(element) {
-            const modal = element.closest('.modal');
-            if (modal) {
-                modal.remove();
+            if (discountType === 'percentage') {
+                discountLabel.textContent = 'Discount %:';
+                discountInput.min = '0';
+                discountInput.max = '100';
+                discountInput.step = '1';
+                discountInput.value = '0';
+            } else if (discountType === 'fixed') {
+                discountLabel.textContent = 'Discount Amount ($):';
+                discountInput.min = '0';
+                discountInput.max = '';
+                discountInput.step = '0.01';
+                discountInput.value = '0';
             }
+            
+            discountRow.style.display = discountType === 'none' ? 'none' : 'block';
+            calculateTotals();
         }
+
+        // Revert PDF table foot configuration
+        foot: [
+            ['', '', 'Subtotal:', '$' + document.querySelector('[name="subtotal"]').value],
+            ...(document.getElementById('discountType').value !== 'none' ? [[
+                '', 
+                '', 
+                document.getElementById('discountType').value === 'percentage' ?
+                    `Discount (${document.querySelector('[name="discountAmount"]').value}%):` :
+                    'Discount:',
+                '-$' + (document.querySelector('[name="subtotal"]').value - 
+                    document.querySelector('[name="afterDiscount"]').value).toFixed(2)
+            ]] : []),
+            ['', '', 'After Discount:', '$' + document.querySelector('[name="afterDiscount"]').value],
+            ['', '', 'Tax (13%):', '$' + document.querySelector('[name="tax"]').value],
+            ['', '', 'Total:', '$' + document.querySelector('[name="total"]').value]
+        ],
+
+        // Add event listener to discount type select
+        document.getElementById('discountType').addEventListener('change', updateDiscountInput);
     </script>
 </body>
 </html>
