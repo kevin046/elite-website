@@ -369,23 +369,20 @@
 
                     // Add client info
                     doc.setFontSize(11);
-                    doc.text('Client Information:', 15, imgHeight + 50);
+                    doc.text('Client Details:', 15, imgHeight + 50);
                     doc.setFontSize(10);
                     doc.text('Name: ' + document.querySelector('[name="clientName"]').value, 20, imgHeight + 60);
-                    doc.text('Phone: ' + document.querySelector('[name="clientPhone"]').value, 20, imgHeight + 67);
-                    doc.text('Email: ' + document.querySelector('[name="clientEmail"]').value, 20, imgHeight + 74);
+                    doc.text('Phone: ' + document.querySelector('[name="clientPhone"]').value, doc.internal.pageSize.width/2, imgHeight + 60);
+                    doc.text('Email: ' + document.querySelector('[name="clientEmail"]').value, 20, imgHeight + 67);
                     doc.text('Address: ' + document.querySelector('[name="clientStreet"]').value + ', ' + 
-                            document.querySelector('[name="clientCity"]').value, 20, imgHeight + 81);
+                            document.querySelector('[name="clientCity"]').value, doc.internal.pageSize.width/2, imgHeight + 67);
 
-                    // Add project description
-                    doc.setFontSize(11);
-                    doc.text('Project Description:', 15, imgHeight + 95);
-                    doc.setFontSize(10);
-                    doc.text(document.querySelector('[name="projectDescription"]').value, 20, imgHeight + 105);
+                    // Add project description more compactly
+                    doc.text('Project: ' + document.querySelector('[name="projectDescription"]').value, 20, imgHeight + 80);
 
                     // Add line items table
                     doc.autoTable({
-                        startY: imgHeight + 120,
+                        startY: imgHeight + 90,
                         head: [['Description', 'Quantity', 'Unit Price', 'Amount']],
                         body: [...document.querySelectorAll('.line-item')].slice(1).map(item => [
                             item.querySelector('[name="description[]"]').value,
@@ -462,29 +459,29 @@
                     doc.setTextColor(0, 0, 0); // Reset to black color
 
                     // Add signature sections
-                    const signatureY = finalY + 50;
+                    const signatureY = finalY + 45;
                     doc.setDrawColor(100, 100, 100);
                     doc.setLineWidth(0.5);
                     
                     // Client signature section
-                    doc.text('Client Authorization:', 15, signatureY);
-                    doc.text('X', 15, signatureY + 25);
-                    doc.line(25, signatureY + 25, 200, signatureY + 25);
-                    doc.text('Signature', 90, signatureY + 35);
-                    doc.text('X', 15, signatureY + 45);
-                    doc.line(25, signatureY + 45, 200, signatureY + 45);
-                    doc.text('Print Name', 90, signatureY + 55);
-                    doc.text('Date: ' + new Date().toLocaleDateString(), 15, signatureY + 65);
+                    doc.text('Client Authorization', 15, signatureY + 15);
+                    doc.text('Print Name:', 15, signatureY + 25);
+                    doc.text('_____________________________', 35, signatureY + 25);
+                    doc.text('Signature:', 15, signatureY + 40);
+                    doc.text('X', 32, signatureY + 40);
+                    doc.text('_____________________________', 35, signatureY + 40);
+                    doc.text('Date:', 15, signatureY + 55);
+                    doc.text('_____________________________', 35, signatureY + 55);
 
                     // Representative signature section
-                    doc.text('Representative Authorization:', doc.internal.pageSize.width/2 + 15, signatureY);
-                    doc.text('X', doc.internal.pageSize.width/2 + 15, signatureY + 25);
-                    doc.line(doc.internal.pageSize.width/2 + 25, signatureY + 25, doc.internal.pageSize.width - 15, signatureY + 25);
-                    doc.text('Signature', doc.internal.pageSize.width/2 + 90, signatureY + 35);
-                    doc.text('X', doc.internal.pageSize.width/2 + 15, signatureY + 45);
-                    doc.line(doc.internal.pageSize.width/2 + 25, signatureY + 45, doc.internal.pageSize.width - 15, signatureY + 45);
-                    doc.text('Print Name', doc.internal.pageSize.width/2 + 90, signatureY + 55);
-                    doc.text('Date: ' + new Date().toLocaleDateString(), doc.internal.pageSize.width/2 + 15, signatureY + 65);
+                    doc.text('Representative Authorization', doc.internal.pageSize.width/2 + 15, signatureY + 15);
+                    doc.text('Print Name:', doc.internal.pageSize.width/2 + 15, signatureY + 25);
+                    doc.text('_____________________________', doc.internal.pageSize.width/2 + 35, signatureY + 25);
+                    doc.text('Signature:', doc.internal.pageSize.width/2 + 15, signatureY + 40);
+                    doc.text('X', doc.internal.pageSize.width/2 + 32, signatureY + 40);
+                    doc.text('_____________________________', doc.internal.pageSize.width/2 + 35, signatureY + 40);
+                    doc.text('Date:', doc.internal.pageSize.width/2 + 15, signatureY + 55);
+                    doc.text('_____________________________', doc.internal.pageSize.width/2 + 35, signatureY + 55);
 
                     // Add GST/HST number if not cash payment
                     if (document.getElementById('paymentMethod').value !== 'cash') {
