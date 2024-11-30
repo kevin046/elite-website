@@ -25,29 +25,32 @@
             border-bottom: 2px solid #e74c3c;
         }
         .logo {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 15px;
+            max-width: 200px;
         }
-        .logo img {
-            max-width: 250px;
-            height: auto;
-            display: block;
-        }
-        .logout-btn {
-            background: #e74c3c;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
+        .header-buttons {
             display: flex;
+            gap: 10px;
+            padding: 10px;
+        }
+        .btn {
+            display: inline-flex;
             align-items: center;
             gap: 8px;
+            padding: 10px 20px;
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            text-decoration: none;
+            transition: background-color 0.3s ease;
         }
-        .logout-btn:hover {
-            background: #c0392b;
+        .btn:hover {
+            background-color: #c0392b;
+        }
+        .btn i {
+            font-size: 16px;
         }
         .options-grid {
             display: grid;
@@ -95,11 +98,6 @@
             color: #666;
             font-size: 1.1em;
         }
-        .header-buttons {
-            display: flex;
-            gap: 15px;
-            align-items: center;
-        }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
@@ -111,11 +109,11 @@
                 <img src="https://i.ibb.co/M58mL0J/transparent-elite-home.png" alt="Elite Renovation Works">
             </div>
             <div class="header-buttons">
-                <a href="https://eliterenovationworks.ca" class="logout-btn">
+                <a href="index.html" class="btn">
                     <i class="fas fa-home"></i>
                     Back to Home
                 </a>
-                <button onclick="logout()" class="logout-btn">
+                <button onclick="logout()" class="btn">
                     <i class="fas fa-sign-out-alt"></i>
                     Logout
                 </button>
