@@ -6,9 +6,9 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         // Initialize Supabase Client
-        const supabaseUrl = 'YOUR_SUPABASE_PROJECT_URL'
-        const supabaseKey = 'YOUR_SUPABASE_ANON_KEY'
-        const supabase = supabase.createClient(supabaseUrl, supabaseKey)
+        const supabaseUrl = 'https://nhcttofusmnzlertxjkq.supabase.co'
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5oY3R0b2Z1c21uemxlcnR4amtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzI5NDA2MDYsImV4cCI6MjA0ODUxNjYwNn0.WA6rQWC5ISi5QiWOKbdf3wwrysBSMhEq5Lt_HXEDqEU'
+        const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey)
 
         // Load and display storage data
         async function loadStorageData() {
@@ -19,7 +19,7 @@
                 const status = document.getElementById('statusFilter').value;
 
                 // Build query
-                let query = supabase
+                let query = supabaseClient
                     .from('estimates')
                     .select('*')
                     .order('created_at', { ascending: false });
@@ -83,7 +83,7 @@
         // View estimate function
         async function viewEstimate(id) {
             try {
-                const { data: estimate, error } = await supabase
+                const { data: estimate, error } = await supabaseClient
                     .from('estimates')
                     .select('*')
                     .eq('id', id)
