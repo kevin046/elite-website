@@ -617,32 +617,16 @@
                     status: 'pending'
                 };
 
-                // Check if estimate number already exists
-                const { data: existingEstimate, error: searchError } = await supabaseClient
+                // Use upsert to handle both insert and update
+                const { error } = await supabaseClient
                     .from('estimates')
-                    .select('id')
-                    .eq('estimate_number', estimateData.estimate_number)
-                    .single();
+                    .upsert(estimateData, {
+                        onConflict: 'estimate_number',
+                        ignoreDuplicates: false
+                    })
+                    .select();
 
-                if (searchError && searchError.code !== 'PGRST116') throw searchError;
-
-                let saveError;
-                if (existingEstimate) {
-                    // Update existing estimate
-                    const { error } = await supabaseClient
-                        .from('estimates')
-                        .update(estimateData)
-                        .eq('id', existingEstimate.id);
-                    saveError = error;
-                } else {
-                    // Insert new estimate
-                    const { error } = await supabaseClient
-                        .from('estimates')
-                        .insert([estimateData]);
-                    saveError = error;
-                }
-
-                if (saveError) throw saveError;
+                if (error) throw error;
 
                 // Create PDF
                 window.jsPDF = window.jspdf.jsPDF;
