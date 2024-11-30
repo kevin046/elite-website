@@ -3,6 +3,10 @@
 <head>
     <title>Quote Estimate - Elite Renovation Works</title>
     <link rel="icon" type="image/x-icon" href="https://i.ibb.co/M58mL0J/transparent-elite-home.png">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     <style>
         body { 
             font-family: Arial, sans-serif;
@@ -297,9 +301,6 @@
             font-style: italic;
         }
     </style>
-    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
     <div class="form-container">
@@ -446,17 +447,23 @@
     </div>
 
     <script>
-        // Generate estimate number
-        document.addEventListener('DOMContentLoaded', function() {
-            function generateEstimateNumber() {
-                const today = new Date();
-                const year = today.getFullYear();
-                const month = (today.getMonth() + 1).toString().padStart(2, '0');
-                const day = today.getDate().toString().padStart(2, '0');
-                const randomNum = Math.floor(Math.random() * (9999 - 1000 + 1) + 1000);
-                return `EST-${year}${month}${day}-${randomNum}`;
-            }
+        // Initialize Supabase client
+        const supabaseUrl = 'https://nhcttofusmnzlertxjkq.supabase.co'
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5oY3R0b2Z1c21uemxlcnR4amtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTAyODM1NzAsImV4cCI6MjAyNTg1OTU3MH0.Nh83ebqzf1iGHTaGywss1EXF4XGvxOr4F2yQHXQnQYk'
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey)
 
+        // Generate estimate number
+        function generateEstimateNumber() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = (today.getMonth() + 1).toString().padStart(2, '0');
+            const day = today.getDate().toString().padStart(2, '0');
+            const randomNum = Math.floor(Math.random() * (9999 - 1000 + 1) + 1000);
+            return `EST-${year}${month}${day}-${randomNum}`;
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set estimate number
             document.querySelector('[name="estimateNumber"]').value = generateEstimateNumber();
 
             // Handle city selection
@@ -547,8 +554,8 @@
             
             try {
                 // Create PDF
-                const { jsPDF } = window.jspdf;
-                const doc = new jsPDF();
+                window.jsPDF = window.jspdf.jsPDF;
+                const doc = new window.jsPDF();
                 
                 // Add company logo
                 const logoUrl = 'https://i.ibb.co/M58mL0J/transparent-elite-home.png';

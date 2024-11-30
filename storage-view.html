@@ -3,6 +3,108 @@
 <head>
     <title>Storage Data - Elite Renovation Works</title>
     <link rel="icon" type="image/x-icon" href="https://i.ibb.co/M58mL0J/transparent-elite-home.png">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Initialize Supabase Client
+        const supabaseUrl = 'YOUR_SUPABASE_PROJECT_URL'
+        const supabaseKey = 'YOUR_SUPABASE_ANON_KEY'
+        const supabase = supabase.createClient(supabaseUrl, supabaseKey)
+
+        // Load and display storage data
+        async function loadStorageData() {
+            try {
+                // Get date filters if set
+                const startDate = document.getElementById('startDate').value;
+                const endDate = document.getElementById('endDate').value;
+                const status = document.getElementById('statusFilter').value;
+
+                // Build query
+                let query = supabase
+                    .from('estimates')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                // Add date filters if set
+                if (startDate) {
+                    query = query.gte('created_at', startDate);
+                }
+                if (endDate) {
+                    query = query.lte('created_at', endDate);
+                }
+                if (status) {
+                    query = query.eq('status', status);
+                }
+
+                // Execute query
+                const { data: estimates, error } = await query;
+
+                if (error) throw error;
+
+                const tbody = document.getElementById('storageData');
+                tbody.innerHTML = '';
+
+                estimates.forEach(estimate => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${new Date(estimate.created_at).toLocaleDateString()}</td>
+                        <td>${estimate.estimate_number}</td>
+                        <td>${estimate.client_name}</td>
+                        <td>${estimate.project_description}</td>
+                        <td>$${parseFloat(estimate.total).toFixed(2)}</td>
+                        <td>${estimate.status || 'pending'}</td>
+                        <td>
+                            <button onclick="viewEstimate('${estimate.id}')" class="action-btn view-btn">
+                                View
+                            </button>
+                            <button onclick="editEstimate('${estimate.id}')" class="action-btn edit-btn">
+                                Edit
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error loading storage data:', error);
+                alert('Failed to load storage data');
+            }
+        }
+
+        // Add event listeners for filters
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load initial data
+            loadStorageData();
+
+            // Add filter event listeners
+            document.getElementById('startDate').addEventListener('change', loadStorageData);
+            document.getElementById('endDate').addEventListener('change', loadStorageData);
+            document.getElementById('statusFilter').addEventListener('change', loadStorageData);
+        });
+
+        // View estimate function
+        async function viewEstimate(id) {
+            try {
+                const { data: estimate, error } = await supabase
+                    .from('estimates')
+                    .select('*')
+                    .eq('id', id)
+                    .single();
+
+                if (error) throw error;
+
+                // Generate PDF or show details
+                // Add your PDF generation code here
+            } catch (error) {
+                console.error('Error viewing estimate:', error);
+                alert('Failed to view estimate');
+            }
+        }
+
+        // Edit estimate function
+        function editEstimate(id) {
+            sessionStorage.setItem('editEstimateId', id);
+            window.location.href = 'estimate-form.html';
+        }
+    </script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -105,6 +207,7 @@
                     <th>Description</th>
                     <th>Total</th>
                     <th>Status</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody id="storageData">
@@ -112,41 +215,5 @@
             </tbody>
         </table>
     </div>
-
-    <script>
-        // Load and display storage data
-        async function loadStorageData() {
-            try {
-                const { data: estimates, error } = await supabase
-                    .from('estimates')
-                    .select('*')
-                    .order('created_at', { ascending: false });
-
-                if (error) throw error;
-
-                const tbody = document.getElementById('storageData');
-                tbody.innerHTML = '';
-
-                estimates.forEach(estimate => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${new Date(estimate.created_at).toLocaleDateString()}</td>
-                        <td>${estimate.estimate_number}</td>
-                        <td>${estimate.client_name}</td>
-                        <td>${estimate.project_description}</td>
-                        <td>$${estimate.total}</td>
-                        <td>${estimate.status || 'pending'}</td>
-                    `;
-                    tbody.appendChild(row);
-                });
-            } catch (error) {
-                console.error('Error loading storage data:', error);
-                alert('Failed to load storage data');
-            }
-        }
-
-        // Load data when page loads
-        document.addEventListener('DOMContentLoaded', loadStorageData);
-    </script>
 </body>
 </html> 
