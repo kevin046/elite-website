@@ -767,10 +767,7 @@
                         document.querySelector('[name="clientCity"]').value + ' ' +
                         document.querySelector('[name="clientPostal"]').value
                     ], doc.internal.pageSize.width/2, imgHeight + 55);
-
-                    // Add project description more compactly
-                    doc.text('Project: ' + document.querySelector('[name="projectDescription"]').value, 20, imgHeight + 70);
-
+              
                     // Update table position to start earlier
                     doc.autoTable({
                         startY: imgHeight + 80,
@@ -864,6 +861,20 @@
                     doc.text('* This estimate is valid for 15 days from the date of issue.', 20, finalY + 50);
                     doc.setTextColor(0, 0, 0);  // Reset back to black
 
+                    // Start second page
+                    doc.addPage();
+
+                    // Add project details header
+                    doc.setFontSize(14);
+                    doc.setTextColor(44, 62, 80);
+                    doc.text('Project Details', 15, 20);
+
+                    // Add project description with word wrapping
+                    doc.setFontSize(10);
+                    const projectDesc = document.querySelector('[name="projectDescription"]').value;
+                    const splitDesc = doc.splitTextToSize(projectDesc, doc.internal.pageSize.width - 30);
+                    doc.text(splitDesc, 15, 35);
+
                     // Update footer position and alignment
                     doc.setFontSize(9);
                     doc.setTextColor(100, 100, 100);
@@ -877,7 +888,6 @@
                         });
                     }
 
-                                  
                     // Save PDF
                     doc.save(`estimate-${document.querySelector('[name="estimateNumber"]').value}.pdf`);
                     alert('Estimate generated and saved successfully!');
