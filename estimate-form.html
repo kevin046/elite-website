@@ -300,6 +300,18 @@
             margin-top: 5px;
             font-style: italic;
         }
+
+        .payment-instructions .form-group {
+            margin-bottom: 15px;
+        }
+
+        .payment-instructions input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
     </style>
 </head>
 <body>
@@ -443,10 +455,18 @@
                 <!-- Add Payment Instructions -->
                 <div class="payment-instructions">
                     <h3>Payment Schedule:</h3>
+                    <div class="form-group">
+                        <label>Second Payment Milestone:</label>
+                        <input type="text" 
+                            name="secondPaymentMilestone" 
+                            id="secondPaymentMilestone"
+                            value="at 50% project completion"
+                            placeholder="Enter milestone description">
+                    </div>
                     <ul>
-                        <li>First Payment: 1/3 of total amount due upon signing contract</li>
-                        <li>Second Payment: 1/3 of total amount due at 50% project completion</li>
-                        <li>Final Payment: Remaining balance due upon project completion</li>
+                        <li>First Payment: 40% of total amount due upon signing contract</li>
+                        <li>Second Payment: 50% of total amount due <span id="milestoneDisplay">at 50% project completion</span></li>
+                        <li>Final Payment: 10% of total amount due upon project completion</li>
                     </ul>
                     <p class="payment-disclaimer">
                         * This estimate is valid for 15 days from the date of issue.<br>
@@ -821,19 +841,20 @@
 
                     // Calculate payment amounts
                     const totalAmount = parseFloat(document.querySelector('[name="total"]').value);
-                    const firstPayment = Math.round(totalAmount / 3);  // Round to nearest dollar
-                    const secondPayment = Math.round(totalAmount / 3); // Round to nearest dollar
-                    const finalPayment = totalAmount - firstPayment - secondPayment; // Remaining balance
+                    const firstPayment = Math.round(totalAmount * 0.4);  // 40% of total
+                    const secondPayment = Math.round(totalAmount * 0.5); // 50% of total
+                    const finalPayment = totalAmount - firstPayment - secondPayment; // Remaining 10%
                     
                     // Format amounts to 2 decimal places
                     const formatAmount = (amount) => '$' + amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
                     
                     // Display payment schedule with exact amounts
                     doc.setTextColor(0, 0, 0);  // Set to black for payment schedule
+                    const secondPaymentMilestone = document.getElementById('secondPaymentMilestone').value || 'at 50% project completion';
                     doc.text([
-                        `• First Payment: ${formatAmount(firstPayment)} due upon signing contract`,
-                        `• Second Payment: ${formatAmount(secondPayment)} due at 50% project completion`,
-                        `• Final Payment: ${formatAmount(finalPayment)} due upon project completion`,
+                        `• First Payment: ${formatAmount(firstPayment)} (40%) due upon signing contract`,
+                        `• Second Payment: ${formatAmount(secondPayment)} (50%) due ${secondPaymentMilestone}`,
+                        `• Final Payment: ${formatAmount(finalPayment)} (10%) due upon project completion`,
                     ], 20, finalY + 20, {
                         lineHeightFactor: 1.5
                     });
@@ -918,6 +939,11 @@
 
         // Add event listener to discount type select
         document.getElementById('discountType').addEventListener('change', updateDiscountInput);
+
+        // Add event listener to update the display text when milestone description changes
+        document.getElementById('secondPaymentMilestone').addEventListener('input', function(e) {
+            document.getElementById('milestoneDisplay').textContent = e.target.value || 'at 50% project completion';
+        });
     </script>
 </body>
 </html>
