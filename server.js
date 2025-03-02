@@ -1,34 +1,80 @@
 const express = require('express');
 const db = require('./db');
+const cors = require('cors');
 const app = express();
 
+app.use(cors());
 app.use(express.json());
 
-// Example endpoint to handle form submissions
-app.post('/api/contact', async (req, res) => {
+// Get all estimates with filters
+app.get('/api/estimates', async (req, res) => {
     try {
-        const { name, email, phone, service, message } = req.body;
+        const { startDate, endDate, status } = req.query;
+        let query = 'SELECT * FROM estimates WHERE 1=1';
+        const params = [];
+
+        if (startDate) {
+            params.push(startDate);
+            query += ` AND created_at >= $${params.length}`;
+        }
+        if (endDate) {
+            params.push(endDate);
+            query += ` AND created_at <= $${params.length}`;
+        }
+        if (status) {
+            params.push(status);
+            query += ` AND status = $${params.length}`;
+        }
+
+        query += ' ORDER BY created_at DESC';
         
-        const query = `
-            INSERT INTO contact_submissions (name, email, phone, service, message)
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING *
-        `;
+        const result = await db.query(query, params);
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Database error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Get estimate by ID
+app.get('/api/estimates/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await db.query(
+            'SELECT * FROM estimates WHERE id = $1',
+            [id]
+        );
         
-        const values = [name, email, phone, service, message];
-        const result = await db.query(query, values);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Estimate not found' });
+        }
         
-        res.json({
-            success: true,
-            message: 'Form submitted successfully',
-            data: result.rows[0]
-        });
-    } catch (err) {
-        console.error('Error submitting form:', err);
-        res.status(500).json({
-            success: false,
-            message: 'Error submitting form'
-        });
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Database error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Create new estimate
+app.post('/api/estimates', async (req, res) => {
+    try {
+        const { estimate_number, client_name, client_email, client_phone, client_address, 
+                project_description, payment_method, line_items, subtotal, tax, total } = req.body;
+        
+        const result = await db.query(
+            `INSERT INTO estimates (
+                estimate_number, client_name, client_email, client_phone, client_address,
+                project_description, payment_method, line_items, subtotal, tax, total
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+            [estimate_number, client_name, client_email, client_phone, client_address,
+             project_description, payment_method, line_items, subtotal, tax, total]
+        );
+        
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Database error:', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 

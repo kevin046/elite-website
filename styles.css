@@ -388,12 +388,27 @@ footer {
 
 .social-links {
     display: flex;
+    justify-content: center;
+    align-items: center;
     gap: 1rem;
 }
 
-.social-links a {
-    color: white;
-    font-size: 1.5rem;
+.social-icons {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.social-icons a {
+    color: var(--text-color);
+    font-size: 1.2rem;
+    opacity: 0.7;
+    transition: all 0.3s ease;
+}
+
+.social-icons a:hover {
+    opacity: 1;
+    color: var(--secondary-color);
 }
 
 .copyright {
@@ -1083,4 +1098,49 @@ img {
     html {
         scroll-behavior: smooth;
     }
-} 
+}
+
+/* Update admin link styles */
+.admin-link {
+    color: var(--text-color);
+    font-size: 1.2rem;
+    opacity: 0.7;
+    transition: all 0.3s ease;
+}
+
+.admin-link:hover {
+    opacity: 1;
+    color: var(--secondary-color);
+}
+
+/* Remove the span styles since we're not using text anymore */
+
+/* Responsive admin link */
+@media (max-width: 768px) {
+    .admin-link {
+        margin-top: 1rem;
+        justify-content: center;
+    }
+}
+
+/* Update social links and admin link styles */
+.social-links {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+}
+
+.social-links a {
+    color: white;
+    font-size: 1.2rem;
+    opacity: 0.7;
+    transition: all 0.3s ease;
+}
+
+.social-links a:hover {
+    opacity: 1;
+    color: var(--secondary-color);
+}
+
+/* Remove any other admin-link specific styles */ 
