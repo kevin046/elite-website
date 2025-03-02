@@ -3,7 +3,6 @@
 <head>
     <title>Admin Login - Elite Renovation Works</title>
     <link rel="icon" type="image/x-icon" href="https://i.ibb.co/M58mL0J/transparent-elite-home.png">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -66,26 +65,11 @@
             text-align: center;
             display: none;
         }
-        .back-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            color: #2c3e50;
-            text-decoration: none;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-        .back-btn:hover {
-            color: #e74c3c;
-        }
-        .back-btn i {
-            font-size: 16px;
-        }
     </style>
 </head>
 <body>
     <div class="login-container">
-        <a href="index.html" class="back-btn">
+        <a href="../index.html" class="back-btn">
             <i class="fas fa-arrow-left"></i>
             Back to Home
         </a>
@@ -121,7 +105,7 @@
                 // Store authentication in session storage
                 sessionStorage.setItem('adminAuthenticated', 'true');
                 // Redirect to dashboard instead of estimate form
-                window.location.href = 'admin-dashboard.html';
+                window.location.href = './admin-dashboard.html';
             } else {
                 errorMessage.style.display = 'block';
             }
@@ -129,8 +113,9 @@
 
         // Check if already authenticated
         if (sessionStorage.getItem('adminAuthenticated') === 'true') {
-            window.location.replace('admin-dashboard.html');
+            window.location.replace('./admin-dashboard.html');
         }
     </script>
 </body>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </html> 

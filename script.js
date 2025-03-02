@@ -1,108 +1,49 @@
-// Global variables
-let isEnglish = true;
-
-// Translations object
-const translations = {
-    en: {
-        sendMessage: "Send Message",
-        sending: "Sending...",
-        thankYou: "Thank you for your message!",
-        willRespond: "We'll get back to you as soon as possible.",
-        emailConfirmation: "A confirmation email has been sent to your email address.",
-        disclaimer: "Note: If the page appears to be loading, please refresh. Your message will still be sent successfully."
-    },
-    zh: {
-        sendMessage: "发送",
-        sending: "发送中...",
-        thankYou: "感谢您的留言！",
-        willRespond: "我们会尽快与您联系。",
-        emailConfirmation: "确认邮件已发送至您的邮箱。",
-        disclaimer: "注意：如果页面显示正在加载，请刷新页面。您的信息仍会成功发送。"
-    }
-};
-
-// Update content function
-function updateContent(content) {
-    // Update all elements with data-lang-key attribute
-    document.querySelectorAll('[data-lang-key]').forEach(element => {
-        const key = element.getAttribute('data-lang-key');
-        if (content[key]) {
-            if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
-                element.placeholder = content[key];
-            } else {
-                element.textContent = content[key];
-            }
-        }
-    });
-
-    // Update submit button
-    const submitButton = document.querySelector('.submit-button');
-    if (submitButton && !submitButton.disabled) {
-        submitButton.textContent = content.sendMessage;
-    }
-}
-
 document.addEventListener('DOMContentLoaded', function() {
     // Form submission handling
     const contactForm = document.getElementById('contactForm');
     const submitButton = contactForm.querySelector('.submit-button');
 
-    if (!contactForm) {
-        console.error('Contact form not found!');
-        return;
-    }
-
-    // Add disclaimer message after submit button
-    const disclaimerMessage = document.createElement('p');
-    disclaimerMessage.className = 'form-disclaimer';
-    disclaimerMessage.style.cssText = 'font-size: 0.85rem; color: #666; margin-top: 0.5rem; text-align: center;';
-    disclaimerMessage.innerHTML = isEnglish ? 
-        'Note: If the page appears to be loading, please refresh. Your message will still be sent successfully.' :
-        '注意：如果页面显示正在加载，请刷新页面。您的信息仍会成功发送。';
-    submitButton.parentNode.insertBefore(disclaimerMessage, submitButton.nextSibling);
-
-    // Language toggle handling
-    const langToggle = document.getElementById('langToggle');
-    const langText = langToggle.querySelector('.lang-text');
-
-    langToggle.addEventListener('click', function() {
-        isEnglish = !isEnglish;
-        langText.textContent = isEnglish ? "中文" : "English";
-        updateContent(translations[isEnglish ? 'en' : 'zh']);
+    contactForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
         
-        // Update disclaimer text
-        disclaimerMessage.innerHTML = isEnglish ? 
-            'Note: If the page appears to be loading, please refresh. Your message will still be sent successfully.' :
-            '注意：如果页面显示正在加载，请刷新页面。您的信息仍会成功发送。';
-    });
+        submitButton.disabled = true;
+        submitButton.textContent = 'Sending...';
 
-    contactForm.addEventListener('submit', function(e) {
-        // Show success message immediately
-        const successMessage = isEnglish ? {
-            title: translations.en.thankYou,
-            message: translations.en.willRespond,
-            confirmation: translations.en.emailConfirmation
-        } : {
-            title: translations.zh.thankYou,
-            message: translations.zh.willRespond,
-            confirmation: translations.zh.emailConfirmation
+        // Get form values
+        const formData = {
+            name: document.getElementById('name').value,
+            email: document.getElementById('email').value,
+            phone: document.getElementById('phone').value,
+            service: document.getElementById('service').value,
+            message: document.getElementById('message').value,
+            customService: document.getElementById('customService')?.value || ''
         };
 
-        // Replace form with success message
-        this.innerHTML = `
-            <div class="success-message">
-                <i class="fas fa-check-circle"></i>
-                <h3>${successMessage.title}</h3>
-                <p>${successMessage.message}</p>
-                <p>${successMessage.confirmation}</p>
-            </div>
-        `;
-        
-        // Scroll to success message
-        this.scrollIntoView({ behavior: 'smooth' });
+        try {
+            const response = await fetch('/api/send-quote', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
 
-        // Let the form submit naturally
-        return true;
+            if (response.ok) {
+                contactForm.innerHTML = `
+                    <div class="success-message">
+                        <i class="fas fa-check-circle"></i>
+                        <h3>Thank you for your message!</h3>
+                        <p>We'll get back to you as soon as possible.</p>
+                    </div>
+                `;
+            } else {
+                const errorData = await response.json();
+                throw new Error(errorData.error);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('There was an error sending your message. Please try again or contact us directly.');
+            submitButton.disabled = false;
+            submitButton.textContent = 'Send Message';
+        }
     });
 
     // Handle custom service field visibility

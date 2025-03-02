@@ -3,9 +3,7 @@
 <head>
     <title>Create Invoice - Elite Renovation Works</title>
     <link rel="icon" type="image/x-icon" href="https://i.ibb.co/M58mL0J/transparent-elite-home.png">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { 
             font-family: Arial, sans-serif;
@@ -119,6 +117,8 @@
             background: #2980b9;
         }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
     <div class="form-container">
@@ -255,6 +255,11 @@
     </div>
 
     <script>
+        // Initialize Supabase client
+        const supabaseUrl = 'https://nhcttofusmnzlertxjkq.supabase.co'
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5oY3R0b2Z1c21uemxlcnR4amtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzI5NDA2MDYsImV4cCI6MjA0ODUxNjYwNn0.WA6rQWC5ISi5QiWOKbdf3wwrysBSMhEq5Lt_HXEDqEU'
+        const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey)
+
         document.addEventListener('DOMContentLoaded', function() {
             // Generate invoice number
             generateInvoiceNumber();
@@ -263,6 +268,48 @@
             const estimateData = JSON.parse(sessionStorage.getItem('invoiceFromEstimate'));
             if (estimateData) {
                 populateFormFromEstimate(estimateData);
+            }
+
+            // Check for edit data
+            const editData = sessionStorage.getItem('editEstimateData');
+            if (editData) {
+                const estimate = JSON.parse(editData);
+                
+                // Fill in form fields
+                document.querySelector('[name="estimateNumber"]').value = estimate.estimate_number;
+                document.querySelector('[name="clientName"]').value = estimate.client_name;
+                document.querySelector('[name="clientEmail"]').value = estimate.client_email;
+                document.querySelector('[name="clientPhone"]').value = estimate.client_phone;
+                
+                // Split address back into parts
+                const [street, city] = estimate.client_address.split(', ');
+                document.querySelector('[name="clientStreet"]').value = street;
+                document.querySelector('[name="clientCity"]').value = city;
+                
+                document.querySelector('[name="projectDescription"]').value = estimate.project_description;
+                document.getElementById('paymentMethod').value = estimate.payment_method;
+                
+                // Add line items
+                estimate.line_items.forEach(item => {
+                    const lineItem = document.createElement('div');
+                    lineItem.className = 'line-item';
+                    lineItem.innerHTML = `
+                        <input type="text" name="description[]" value="${item.description}" required>
+                        <input type="number" name="quantity[]" value="${item.quantity}" required>
+                        <input type="number" name="unitPrice[]" value="${item.unit_price}" required>
+                        <input type="number" name="amount[]" value="${item.amount}" readonly>
+                        <button type="button" class="remove-item" onclick="this.parentElement.remove(); calculateTotals();">×</button>
+                    `;
+                    document.getElementById('lineItems').appendChild(lineItem);
+                });
+                
+                // Update totals
+                document.querySelector('[name="subtotal"]').value = estimate.subtotal;
+                document.querySelector('[name="tax"]').value = estimate.tax;
+                document.querySelector('[name="total"]').value = estimate.total;
+                
+                // Clear the stored data
+                sessionStorage.removeItem('editEstimateData');
             }
         });
 
@@ -518,41 +565,50 @@
             }
 
             try {
-                // Replace Supabase query with fetch to your server
-                const response = await fetch(`/api/estimates/${estimateNumber}`);
-                if (!response.ok) {
-                    throw new Error('Failed to fetch estimate');
-                }
-                const estimate = await response.json();
+                const { data: estimates, error } = await supabaseClient
+                    .from('estimates')
+                    .select('*')
+                    .eq('estimate_number', estimateNumber)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .single();
 
-                if (!estimate) {
+                if (error) {
+                    if (error.code === 'PGRST116') {
+                        alert('No estimate found with this number');
+                        return;
+                    }
+                    throw error;
+                }
+
+                if (!estimates) {
                     alert('No estimate found with this number');
                     return;
                 }
 
                 // Fill in form fields
-                document.querySelector('[name="clientName"]').value = estimate.client_name;
-                document.querySelector('[name="clientEmail"]').value = estimate.client_email;
-                document.querySelector('[name="clientPhone"]').value = estimate.client_phone;
+                document.querySelector('[name="clientName"]').value = estimates.client_name;
+                document.querySelector('[name="clientEmail"]').value = estimates.client_email;
+                document.querySelector('[name="clientPhone"]').value = estimates.client_phone;
                 
                 // Split address back into parts
-                const [street, cityAndPostal] = estimate.client_address.split(', ');
+                const [street, cityAndPostal] = estimates.client_address.split(', ');
                 const [city, postal] = cityAndPostal.split(' ');
                 document.querySelector('[name="clientStreet"]').value = street;
                 document.querySelector('[name="clientCity"]').value = city;
                 document.querySelector('[name="clientPostal"]').value = postal || '';
                 
                 // Set discount information if exists
-                if (estimate.discount_type) {
-                    document.getElementById('discountType').value = estimate.discount_type;
-                    document.querySelector('[name="discountAmount"]').value = estimate.discount_amount || 0;
-                    document.querySelector('[name="afterDiscount"]').value = estimate.after_discount || 0;
+                if (estimates.discount_type) {
+                    document.getElementById('discountType').value = estimates.discount_type;
+                    document.querySelector('[name="discountAmount"]').value = estimates.discount_amount || 0;
+                    document.querySelector('[name="afterDiscount"]').value = estimates.after_discount || 0;
                     // Show discount row if there's a discount
-                    document.getElementById('discountRow').style.display = estimate.discount_type !== 'none' ? 'block' : 'none';
+                    document.getElementById('discountRow').style.display = estimates.discount_type !== 'none' ? 'block' : 'none';
                 }
 
-                document.querySelector('[name="projectDescription"]').value = estimate.project_description;
-                document.getElementById('paymentMethod').value = estimate.payment_method;
+                document.querySelector('[name="projectDescription"]').value = estimates.project_description;
+                document.getElementById('paymentMethod').value = estimates.payment_method;
                 
                 // Clear existing line items except header
                 const lineItemsContainer = document.getElementById('lineItems');
@@ -561,7 +617,7 @@
                 }
 
                 // Add line items
-                estimate.line_items.forEach(item => {
+                estimates.line_items.forEach(item => {
                     const lineItem = document.createElement('div');
                     lineItem.className = 'line-item';
                     lineItem.innerHTML = `
@@ -575,11 +631,11 @@
                 });
                 
                 // Update totals
-                document.querySelector('[name="subtotal"]').value = estimate.subtotal;
+                document.querySelector('[name="subtotal"]').value = estimates.subtotal;
                 // Update discount display and calculations
                 updateDiscountInput();
-                document.querySelector('[name="tax"]').value = estimate.tax;
-                document.querySelector('[name="total"]').value = estimate.total;
+                document.querySelector('[name="tax"]').value = estimates.tax;
+                document.querySelector('[name="total"]').value = estimates.total;
 
                 // Update tax display based on payment method
                 updateTaxCalculation();
