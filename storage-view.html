@@ -123,21 +123,25 @@
     </div>
 
     <script>
-        // Update the base URL for API calls based on environment
+        // Update the API_BASE_URL definition
         const API_BASE_URL = window.location.hostname === 'localhost' 
             ? 'http://localhost:3000/api'
-            : 'https://api.eliterenovationworks.ca/api';
+            : 'https://eliterenovationworks.ca/api';
 
-        // Add error handling and retry logic
+        // Update the fetchWithRetry function
         async function fetchWithRetry(url, options = {}, retries = 3) {
             for (let i = 0; i < retries; i++) {
                 try {
                     const response = await fetch(url, {
                         ...options,
-                        credentials: 'include'
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...options.headers
+                        }
                     });
                     if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
+                        const error = await response.json();
+                        throw new Error(error.error || `HTTP error! status: ${response.status}`);
                     }
                     return response;
                 } catch (error) {

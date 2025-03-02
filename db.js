@@ -7,14 +7,14 @@ const pool = new Pool({
         require: true,
         rejectUnauthorized: false
     },
-    max: 1, // Adjust for serverless
-    connectionTimeoutMillis: 5000
+    max: 1,
+    idleTimeoutMillis: 120000,
+    connectionTimeoutMillis: 10000
 });
 
 // Add error handling for the pool
 pool.on('error', (err) => {
     console.error('Unexpected error on idle client', err);
-    process.exit(-1);
 });
 
 // Add connection testing
@@ -26,7 +26,11 @@ module.exports = {
     query: async (text, params) => {
         const client = await pool.connect();
         try {
-            return await client.query(text, params);
+            const start = Date.now();
+            const result = await client.query(text, params);
+            const duration = Date.now() - start;
+            console.log('Executed query', { text, duration, rows: result.rowCount });
+            return result;
         } finally {
             client.release();
         }
