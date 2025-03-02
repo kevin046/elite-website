@@ -99,6 +99,11 @@
             </div>
         </div>
 
+        <div id="loadingIndicator" style="display: none; text-align: center; padding: 20px;">
+            Loading data...
+        </div>
+        <div id="errorMessage" style="display: none; color: red; text-align: center; padding: 20px;"></div>
+
         <table class="data-table">
             <thead>
                 <tr>
@@ -120,7 +125,14 @@
     <script>
         // Load and display storage data
         async function loadStorageData() {
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const errorMessage = document.getElementById('errorMessage');
+            const tbody = document.getElementById('storageData');
+            
             try {
+                loadingIndicator.style.display = 'block';
+                errorMessage.style.display = 'none';
+                
                 const startDate = document.getElementById('startDate').value;
                 const endDate = document.getElementById('endDate').value;
                 const status = document.getElementById('statusFilter').value;
@@ -131,13 +143,25 @@
                 if (endDate) params.append('endDate', endDate);
                 if (status) params.append('status', status);
 
-                // Fetch data from server
-                const response = await fetch(`/api/estimates?${params}`);
-                if (!response.ok) throw new Error('Failed to fetch estimates');
-                const estimates = await response.json();
+                // Test database connection first
+                const testResponse = await fetch('/api/test-db');
+                if (!testResponse.ok) {
+                    throw new Error('Database connection failed');
+                }
 
-                const tbody = document.getElementById('storageData');
+                // Fetch estimates data
+                const response = await fetch(`/api/estimates?${params}`);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch estimates');
+                }
+                
+                const estimates = await response.json();
                 tbody.innerHTML = '';
+
+                if (estimates.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No estimates found</td></tr>';
+                    return;
+                }
 
                 // Display estimates
                 estimates.forEach(estimate => {
@@ -161,8 +185,11 @@
                     tbody.appendChild(row);
                 });
             } catch (error) {
-                console.error('Error loading storage data:', error);
-                alert('Failed to load storage data');
+                console.error('Error:', error);
+                errorMessage.textContent = error.message || 'Failed to load storage data';
+                errorMessage.style.display = 'block';
+            } finally {
+                loadingIndicator.style.display = 'none';
             }
         }
 
@@ -335,8 +362,15 @@
             }
         }
 
-        // Add event listeners when page loads
-        document.addEventListener('DOMContentLoaded', loadStorageData);
+        // Add event listeners for filters
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStorageData();
+            
+            // Add filter event listeners
+            document.getElementById('startDate').addEventListener('change', loadStorageData);
+            document.getElementById('endDate').addEventListener('change', loadStorageData);
+            document.getElementById('statusFilter').addEventListener('change', loadStorageData);
+        });
     </script>
 </body>
 </html> 

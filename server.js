@@ -37,6 +37,17 @@ app.get('/api/estimates', async (req, res) => {
     }
 });
 
+// Test database connection endpoint
+app.get('/api/test-db', async (req, res) => {
+    try {
+        const result = await db.query('SELECT NOW()');
+        res.json({ success: true, time: result.rows[0].now });
+    } catch (error) {
+        console.error('Database connection error:', error);
+        res.status(500).json({ error: 'Database connection failed' });
+    }
+});
+
 // Get estimate by ID
 app.get('/api/estimates/:id', async (req, res) => {
     try {

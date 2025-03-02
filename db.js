@@ -8,13 +8,13 @@ const pool = new Pool({
     }
 });
 
-// Test the connection
-pool.query('SELECT NOW()', (err, res) => {
-    if (err) {
-        console.error('Database connection error:', err);
-    } else {
-        console.log('Database connected successfully');
-    }
+// Add error handling for the pool
+pool.on('error', (err, client) => {
+    console.error('Unexpected error on idle client', err);
+    process.exit(-1);
 });
 
-module.exports = pool; 
+module.exports = {
+    query: (text, params) => pool.query(text, params),
+    pool
+}; 
