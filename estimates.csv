@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 -- Create estimates table in Supabase
 create table estimates (
     id uuid default uuid_generate_v4() primary key,
@@ -19,4 +20,27 @@ create table estimates (
 -- Add indexes for better performance
 create index estimates_created_at_idx on estimates(created_at);
 create index estimates_status_idx on estimates(status);
+=======
+-- Create estimates table in Supabase
+create table estimates (
+    id uuid default uuid_generate_v4() primary key,
+    created_at timestamp with time zone default timezone('utc'::text, now()),
+    estimate_number text not null,
+    client_name text not null,
+    client_email text,
+    client_phone text,
+    client_address text,
+    project_description text,
+    payment_method text,
+    subtotal numeric,
+    tax numeric,
+    total numeric,
+    line_items jsonb,
+    status text default 'pending'
+);
+
+-- Add indexes for better performance
+create index estimates_created_at_idx on estimates(created_at);
+create index estimates_status_idx on estimates(status);
+>>>>>>> a0d7158b4976ba338909445291e374ce13ccc293
 create index estimates_estimate_number_idx on estimates(estimate_number);

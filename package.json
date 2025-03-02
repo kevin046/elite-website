@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 {
   "dependencies": {
     "@supabase/supabase-js": "^2.46.2",
@@ -16,3 +17,23 @@
   "license": "ISC",
   "description": ""
 }
+=======
+{
+  "dependencies": {
+    "@supabase/supabase-js": "^2.46.2",
+    "cors": "^2.8.5",
+    "express": "^4.21.1",
+    "puppeteer": "^23.9.0"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "name": "picture",
+  "version": "1.0.0",
+  "main": "generate-pdf.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}
+>>>>>>> a0d7158b4976ba338909445291e374ce13ccc293
