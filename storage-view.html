@@ -123,8 +123,29 @@
     </div>
 
     <script>
-        // Update the base URL for API calls
-        const API_BASE_URL = '/api'; // Use relative path
+        // Update the base URL for API calls based on environment
+        const API_BASE_URL = window.location.hostname === 'localhost' 
+            ? 'http://localhost:3000/api'
+            : 'https://api.eliterenovationworks.ca/api';
+
+        // Add error handling and retry logic
+        async function fetchWithRetry(url, options = {}, retries = 3) {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(url, {
+                        ...options,
+                        credentials: 'include'
+                    });
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response;
+                } catch (error) {
+                    if (i === retries - 1) throw error;
+                    await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+                }
+            }
+        }
 
         // Load and display storage data
         async function loadStorageData() {
@@ -147,18 +168,16 @@
                 if (status) params.append('status', status);
 
                 // Test database connection first
-                const testResponse = await fetch(`${API_BASE_URL}/test-db`);
-                if (!testResponse.ok) {
-                    throw new Error('Database connection failed');
+                try {
+                    await fetchWithRetry(`${API_BASE_URL}/test-db`);
+                } catch (error) {
+                    throw new Error('Unable to connect to database. Please try again later.');
                 }
 
                 // Fetch estimates data
-                const response = await fetch(`${API_BASE_URL}/estimates?${params}`);
-                if (!response.ok) {
-                    throw new Error('Failed to fetch estimates');
-                }
-                
+                const response = await fetchWithRetry(`${API_BASE_URL}/estimates?${params}`);
                 const estimates = await response.json();
+                
                 tbody.innerHTML = '';
 
                 if (estimates.length === 0) {
@@ -189,7 +208,7 @@
                 });
             } catch (error) {
                 console.error('Error:', error);
-                errorMessage.textContent = error.message || 'Failed to load storage data';
+                errorMessage.textContent = error.message || 'Failed to load storage data. Please try again.';
                 errorMessage.style.display = 'block';
             } finally {
                 loadingIndicator.style.display = 'none';
@@ -199,8 +218,7 @@
         // View estimate function
         async function viewEstimate(id) {
             try {
-                const response = await fetch(`${API_BASE_URL}/estimates/${id}`);
-                if (!response.ok) throw new Error('Failed to fetch estimate');
+                const response = await fetchWithRetry(`${API_BASE_URL}/estimates/${id}`);
                 const estimate = await response.json();
                 
                 // Create PDF
@@ -346,22 +364,20 @@
                 };
             } catch (error) {
                 console.error('Error viewing estimate:', error);
-                alert('Failed to view estimate');
+                alert('Failed to view estimate. Please try again.');
             }
         }
 
         // Edit estimate function
         async function editEstimate(id) {
             try {
-                const response = await fetch(`${API_BASE_URL}/estimates/${id}`);
-                if (!response.ok) throw new Error('Failed to fetch estimate');
+                const response = await fetchWithRetry(`${API_BASE_URL}/estimates/${id}`);
                 const estimate = await response.json();
-
                 sessionStorage.setItem('editEstimateData', JSON.stringify(estimate));
                 window.location.href = 'estimate-form.html';
             } catch (error) {
                 console.error('Error loading estimate for edit:', error);
-                alert('Failed to load estimate for editing');
+                alert('Failed to load estimate for editing. Please try again.');
             }
         }
 

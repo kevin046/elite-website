@@ -6,15 +6,24 @@ require('dotenv').config();
 
 const app = express();
 
-// Configure CORS
+// Configure CORS to allow requests from your domain
 app.use(cors({
-    origin: ['http://localhost:3000', 'https://www.eliterenovationworks.ca'],
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    origin: [
+        'http://localhost:3000',
+        'http://localhost:5000',
+        'https://eliterenovationworks.ca',
+        'https://www.eliterenovationworks.ca'
+    ],
     credentials: true
 }));
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+    res.json({ status: 'ok' });
+});
 
 // Add error handling middleware
 app.use((err, req, res, next) => {
