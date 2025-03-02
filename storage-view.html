@@ -3,61 +3,144 @@
 <head>
     <title>Storage Data - Elite Renovation Works</title>
     <link rel="icon" type="image/x-icon" href="https://i.ibb.co/M58mL0J/transparent-elite-home.png">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-    <script>
-        // Initialize Supabase Client
-        const supabaseUrl = 'https://nhcttofusmnzlertxjkq.supabase.co'
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5oY3R0b2Z1c21uemxlcnR4amtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzI5NDA2MDYsImV4cCI6MjA0ODUxNjYwNn0.WA6rQWC5ISi5QiWOKbdf3wwrysBSMhEq5Lt_HXEDqEU'
-        const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey)
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f6fa;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        .back-btn {
+            background: #3498db;
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .data-table th, 
+        .data-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        .data-table th {
+            background: #2c3e50;
+            color: white;
+        }
+        .data-table tr:hover {
+            background: #f8f9fa;
+        }
+        .filters {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+        }
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .filter-group select,
+        .filter-group input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button onclick="window.location.href='admin-dashboard.html'" class="back-btn">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </button>
+            <h1>Storage Data</h1>
+        </div>
 
+        <div class="filters">
+            <div class="filter-group">
+                <label>Date Range:</label>
+                <input type="date" id="startDate">
+                <input type="date" id="endDate">
+            </div>
+            <div class="filter-group">
+                <label>Status:</label>
+                <select id="statusFilter">
+                    <option value="">All</option>
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="completed">Completed</option>
+                </select>
+            </div>
+        </div>
+
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Estimate #</th>
+                    <th>Client</th>
+                    <th>Description</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="storageData">
+                <!-- Data will be loaded here -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
         // Load and display storage data
         async function loadStorageData() {
             try {
-                // Get date filters if set
                 const startDate = document.getElementById('startDate').value;
                 const endDate = document.getElementById('endDate').value;
                 const status = document.getElementById('statusFilter').value;
 
-                // Build query
-                let query = supabaseClient
-                    .from('estimates')
-                    .select('*')
-                    .order('created_at', { ascending: false });
+                // Build query params
+                let params = new URLSearchParams();
+                if (startDate) params.append('startDate', startDate);
+                if (endDate) params.append('endDate', endDate);
+                if (status) params.append('status', status);
 
-                // Add date filters if set
-                if (startDate) {
-                    query = query.gte('created_at', startDate);
-                }
-                if (endDate) {
-                    query = query.lte('created_at', endDate);
-                }
-                if (status) {
-                    query = query.eq('status', status);
-                }
-
-                // Execute query
-                const { data: estimates, error } = await query;
-
-                if (error) throw error;
+                // Fetch data from server
+                const response = await fetch(`/api/estimates?${params}`);
+                if (!response.ok) throw new Error('Failed to fetch estimates');
+                const estimates = await response.json();
 
                 const tbody = document.getElementById('storageData');
                 tbody.innerHTML = '';
 
-                // Create a Map to store latest version of each estimate
-                const latestEstimates = new Map();
-                
-                // Process estimates to keep only the latest version
+                // Display estimates
                 estimates.forEach(estimate => {
-                    if (!latestEstimates.has(estimate.estimate_number) || 
-                        new Date(estimate.created_at) > new Date(latestEstimates.get(estimate.estimate_number).created_at)) {
-                        latestEstimates.set(estimate.estimate_number, estimate);
-                    }
-                });
-
-                // Display only the latest versions
-                Array.from(latestEstimates.values()).forEach(estimate => {
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td>${new Date(estimate.created_at).toLocaleDateString()}</td>
@@ -83,28 +166,13 @@
             }
         }
 
-        // Add event listeners for filters
-        document.addEventListener('DOMContentLoaded', function() {
-            // Load initial data
-            loadStorageData();
-
-            // Add filter event listeners
-            document.getElementById('startDate').addEventListener('change', loadStorageData);
-            document.getElementById('endDate').addEventListener('change', loadStorageData);
-            document.getElementById('statusFilter').addEventListener('change', loadStorageData);
-        });
-
         // View estimate function
         async function viewEstimate(id) {
             try {
-                const { data: estimate, error } = await supabaseClient
-                    .from('estimates')
-                    .select('*')
-                    .eq('id', id)
-                    .single();
-
-                if (error) throw error;
-
+                const response = await fetch(`/api/estimates/${id}`);
+                if (!response.ok) throw new Error('Failed to fetch estimate');
+                const estimate = await response.json();
+                
                 // Create PDF
                 window.jsPDF = window.jspdf.jsPDF;
                 const doc = new window.jsPDF();
@@ -255,148 +323,20 @@
         // Edit estimate function
         async function editEstimate(id) {
             try {
-                // Get estimate data
-                const { data: estimate, error } = await supabaseClient
-                    .from('estimates')
-                    .select('*')
-                    .eq('id', id)
-                    .single();
+                const response = await fetch(`/api/estimates/${id}`);
+                if (!response.ok) throw new Error('Failed to fetch estimate');
+                const estimate = await response.json();
 
-                if (error) throw error;
-
-                // Store full estimate data in sessionStorage
-                sessionStorage.setItem('editEstimateData', JSON.stringify({
-                    estimate_number: estimate.estimate_number,
-                    client_name: estimate.client_name,
-                    client_email: estimate.client_email,
-                    client_phone: estimate.client_phone,
-                    client_address: estimate.client_address,
-                    project_description: estimate.project_description,
-                    payment_method: estimate.payment_method,
-                    subtotal: estimate.subtotal,
-                    tax: estimate.tax,
-                    total: estimate.total,
-                    line_items: estimate.line_items,
-                    status: estimate.status
-                }));
-
-                // Redirect to estimate-form.html in the same directory
+                sessionStorage.setItem('editEstimateData', JSON.stringify(estimate));
                 window.location.href = 'estimate-form.html';
             } catch (error) {
                 console.error('Error loading estimate for edit:', error);
                 alert('Failed to load estimate for editing');
             }
         }
+
+        // Add event listeners when page loads
+        document.addEventListener('DOMContentLoaded', loadStorageData);
     </script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f5f6fa;
-            margin: 0;
-            padding: 20px;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-        }
-        .back-btn {
-            background: #3498db;
-            color: white;
-            padding: 8px 15px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        .data-table th, 
-        .data-table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #eee;
-        }
-        .data-table th {
-            background: #2c3e50;
-            color: white;
-        }
-        .data-table tr:hover {
-            background: #f8f9fa;
-        }
-        .filters {
-            margin-bottom: 20px;
-            display: flex;
-            gap: 15px;
-        }
-        .filter-group {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .filter-group select,
-        .filter-group input {
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <button onclick="window.location.href='admin-dashboard.html'" class="back-btn">
-                <i class="fas fa-arrow-left"></i> Back to Dashboard
-            </button>
-            <h1>Storage Data</h1>
-        </div>
-
-        <div class="filters">
-            <div class="filter-group">
-                <label>Date Range:</label>
-                <input type="date" id="startDate">
-                <input type="date" id="endDate">
-            </div>
-            <div class="filter-group">
-                <label>Status:</label>
-                <select id="statusFilter">
-                    <option value="">All</option>
-                    <option value="pending">Pending</option>
-                    <option value="approved">Approved</option>
-                    <option value="completed">Completed</option>
-                </select>
-            </div>
-        </div>
-
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Estimate #</th>
-                    <th>Client</th>
-                    <th>Description</th>
-                    <th>Total</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody id="storageData">
-                <!-- Data will be loaded here -->
-            </tbody>
-        </table>
-    </div>
 </body>
 </html> 
