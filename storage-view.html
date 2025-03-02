@@ -123,6 +123,9 @@
     </div>
 
     <script>
+        // Update the base URL for API calls
+        const API_BASE_URL = '/api'; // Use relative path
+
         // Load and display storage data
         async function loadStorageData() {
             const loadingIndicator = document.getElementById('loadingIndicator');
@@ -144,13 +147,13 @@
                 if (status) params.append('status', status);
 
                 // Test database connection first
-                const testResponse = await fetch('/api/test-db');
+                const testResponse = await fetch(`${API_BASE_URL}/test-db`);
                 if (!testResponse.ok) {
                     throw new Error('Database connection failed');
                 }
 
                 // Fetch estimates data
-                const response = await fetch(`/api/estimates?${params}`);
+                const response = await fetch(`${API_BASE_URL}/estimates?${params}`);
                 if (!response.ok) {
                     throw new Error('Failed to fetch estimates');
                 }
@@ -196,7 +199,7 @@
         // View estimate function
         async function viewEstimate(id) {
             try {
-                const response = await fetch(`/api/estimates/${id}`);
+                const response = await fetch(`${API_BASE_URL}/estimates/${id}`);
                 if (!response.ok) throw new Error('Failed to fetch estimate');
                 const estimate = await response.json();
                 
@@ -350,7 +353,7 @@
         // Edit estimate function
         async function editEstimate(id) {
             try {
-                const response = await fetch(`/api/estimates/${id}`);
+                const response = await fetch(`${API_BASE_URL}/estimates/${id}`);
                 if (!response.ok) throw new Error('Failed to fetch estimate');
                 const estimate = await response.json();
 

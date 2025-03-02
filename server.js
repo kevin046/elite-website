@@ -1,11 +1,26 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const db = require('./db');
 require('dotenv').config();
 
 const app = express();
-app.use(cors());
+
+// Configure CORS
+app.use(cors({
+    origin: ['http://localhost:3000', 'https://www.eliterenovationworks.ca'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true
+}));
+
 app.use(express.json());
+app.use(express.static(path.join(__dirname)));
+
+// Add error handling middleware
+app.use((err, req, res, next) => {
+    console.error('Server Error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+});
 
 // Get all estimates with filters
 app.get('/api/estimates', async (req, res) => {

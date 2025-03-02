@@ -8,10 +8,15 @@ const pool = new Pool({
     }
 });
 
-// Add error handling for the pool
-pool.on('error', (err, client) => {
+// Add connection error handling
+pool.on('error', (err) => {
     console.error('Unexpected error on idle client', err);
     process.exit(-1);
+});
+
+// Add connection testing
+pool.on('connect', () => {
+    console.log('Database connected successfully');
 });
 
 module.exports = {
