@@ -41,21 +41,40 @@ app.post('/api/generate-pdf', async (req, res) => {
 
 app.get('/api/estimates', async (req, res) => {
     try {
-        const estimates = JSON.parse(await fs.readFile(ESTIMATES_FILE, 'utf8'));
-        res.json(estimates);
+        const { startDate, endDate, status } = req.query;
+        let query = 'SELECT * FROM estimates WHERE 1=1';
+        const params = [];
+
+        if (startDate) {
+            params.push(startDate);
+            query += ` AND created_at >= $${params.length}`;
+        }
+        if (endDate) {
+            params.push(endDate);
+            query += ` AND created_at <= $${params.length}`;
+        }
+        if (status) {
+            params.push(status);
+            query += ` AND status = $${params.length}`;
+        }
+
+        query += ' ORDER BY created_at DESC';
+        
+        const result = await pool.query(query, params);
+        res.json(result.rows);
     } catch (error) {
-        console.error('Error reading estimates:', error);
-        res.status(500).json({ error: 'Failed to load estimates' });
+        console.error('Database error:', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 
-// Fetch estimate by number
-app.get('/api/estimates/:number', async (req, res) => {
+// Get estimate by ID
+app.get('/api/estimates/:id', async (req, res) => {
     try {
-        const { number } = req.params;
+        const { id } = req.params;
         const result = await pool.query(
-            'SELECT * FROM estimates WHERE estimate_number = $1 ORDER BY created_at DESC LIMIT 1',
-            [number]
+            'SELECT * FROM estimates WHERE id = $1',
+            [id]
         );
         
         if (result.rows.length === 0) {
