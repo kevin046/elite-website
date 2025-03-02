@@ -4,11 +4,14 @@ require('dotenv').config();
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: {
-        require: true
-    }
+        require: true,
+        rejectUnauthorized: false
+    },
+    max: 1, // Adjust for serverless
+    connectionTimeoutMillis: 5000
 });
 
-// Add connection error handling
+// Add error handling for the pool
 pool.on('error', (err) => {
     console.error('Unexpected error on idle client', err);
     process.exit(-1);
@@ -20,6 +23,13 @@ pool.on('connect', () => {
 });
 
 module.exports = {
-    query: (text, params) => pool.query(text, params),
+    query: async (text, params) => {
+        const client = await pool.connect();
+        try {
+            return await client.query(text, params);
+        } finally {
+            client.release();
+        }
+    },
     pool
 }; 

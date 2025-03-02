@@ -1,12 +1,11 @@
 const express = require('express');
 const cors = require('cors');
-const path = require('path');
 const db = require('./db');
 require('dotenv').config();
 
 const app = express();
 
-// Configure CORS to allow requests from your domain
+// Configure CORS
 app.use(cors({
     origin: [
         'http://localhost:3000',
@@ -18,17 +17,21 @@ app.use(cors({
 }));
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname)));
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+app.get('/api/health', (req, res) => {
     res.json({ status: 'ok' });
 });
 
-// Add error handling middleware
-app.use((err, req, res, next) => {
-    console.error('Server Error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+// Test database connection endpoint
+app.get('/api/test-db', async (req, res) => {
+    try {
+        const result = await db.query('SELECT NOW()');
+        res.json({ success: true, time: result.rows[0].now });
+    } catch (error) {
+        console.error('Database connection error:', error);
+        res.status(500).json({ error: 'Database connection failed' });
+    }
 });
 
 // Get all estimates with filters
@@ -61,17 +64,6 @@ app.get('/api/estimates', async (req, res) => {
     }
 });
 
-// Test database connection endpoint
-app.get('/api/test-db', async (req, res) => {
-    try {
-        const result = await db.query('SELECT NOW()');
-        res.json({ success: true, time: result.rows[0].now });
-    } catch (error) {
-        console.error('Database connection error:', error);
-        res.status(500).json({ error: 'Database connection failed' });
-    }
-});
-
 // Get estimate by ID
 app.get('/api/estimates/:id', async (req, res) => {
     try {
@@ -92,29 +84,13 @@ app.get('/api/estimates/:id', async (req, res) => {
     }
 });
 
-// Create new estimate
-app.post('/api/estimates', async (req, res) => {
-    try {
-        const { estimate_number, client_name, client_email, client_phone, client_address, 
-                project_description, payment_method, line_items, subtotal, tax, total } = req.body;
-        
-        const result = await db.query(
-            `INSERT INTO estimates (
-                estimate_number, client_name, client_email, client_phone, client_address,
-                project_description, payment_method, line_items, subtotal, tax, total
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
-            [estimate_number, client_name, client_email, client_phone, client_address,
-             project_description, payment_method, line_items, subtotal, tax, total]
-        );
-        
-        res.json(result.rows[0]);
-    } catch (error) {
-        console.error('Database error:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
+// For Vercel serverless deployment
+if (process.env.NODE_ENV !== 'production') {
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+    });
+}
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-}); 
+// Export for Vercel
+module.exports = app; 
